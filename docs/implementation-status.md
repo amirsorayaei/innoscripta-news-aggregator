@@ -2,13 +2,13 @@
 
 _Last updated: 2026-10-19 (Asia/Tehran)._
 
-| Phase | Branch                     | Status                         |
-| ----- | -------------------------- | ------------------------------ |
-| 1     | `chore/project-foundation` | PR open, awaiting review/merge |
-| 2     | `feat/news-providers`      | Not started                    |
-| 3     | `feat/explore-feed`        | Not started                    |
-| 4     | `feat/personalized-feed`   | Not started                    |
-| 5     | `chore/release-readiness`  | Not started                    |
+| Phase | Branch                     | Status                                                                                                  |
+| ----- | -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 1     | `chore/project-foundation` | [PR #1](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/1) open, awaiting review/merge |
+| 2     | `feat/news-providers`      | Not started                                                                                             |
+| 3     | `feat/explore-feed`        | Not started                                                                                             |
+| 4     | `feat/personalized-feed`   | Not started                                                                                             |
+| 5     | `chore/release-readiness`  | Not started                                                                                             |
 
 ## Phase 1: completed
 
