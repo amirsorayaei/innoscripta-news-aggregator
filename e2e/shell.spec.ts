@@ -141,3 +141,13 @@ for (const { path, heading } of pages) {
     expect(blocking.map((v) => `${v.id}: ${v.help}`)).toEqual([])
   })
 }
+
+test('serves the Demo feed with a pagination cursor', async ({ request }) => {
+  const response = await request.get('/api/feed?source=guardian')
+  expect(response.status()).toBe(200)
+
+  const body = await response.json()
+  expect(body).toMatchObject({ mode: 'demo' })
+  expect(body.articles).toHaveLength(10)
+  expect(typeof body.nextCursor).toBe('string')
+})
