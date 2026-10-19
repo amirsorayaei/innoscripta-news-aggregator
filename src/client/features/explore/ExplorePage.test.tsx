@@ -84,7 +84,8 @@ describe('Explore search', () => {
     expect(search(router)).toBe('')
 
     await waitFor(() => expect(search(router)).toBe('?q=flood'))
-    await screen.findByText(/Showing 2 articles/)
+    await waitFor(() => expect(queriesSent('q')).toEqual([null, 'flood']))
+    await act(() => sleep(450))
     expect(queriesSent('q')).toEqual([null, 'flood'])
   })
 
