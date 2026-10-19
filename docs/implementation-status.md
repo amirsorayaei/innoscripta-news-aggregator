@@ -2,13 +2,13 @@
 
 _Last updated: 2026-10-20 (Asia/Tehran)._
 
-| Phase | Branch                     | Status                                                      |
-| ----- | -------------------------- | ----------------------------------------------------------- |
-| 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified |
-| 2     | `feat/news-providers`      | Draft PR; real-provider verification pending                |
-| 3     | `feat/explore-feed`        | Not started                                                 |
-| 4     | `feat/personalized-feed`   | Not started                                                 |
-| 5     | `chore/release-readiness`  | Not started                                                 |
+| Phase | Branch                     | Status                                                                                                                |
+| ----- | -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                           |
+| 2     | `feat/news-providers`      | [Draft PR #2](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/2); real-provider verification pending |
+| 3     | `feat/explore-feed`        | Not started                                                                                                           |
+| 4     | `feat/personalized-feed`   | Not started                                                                                                           |
+| 5     | `chore/release-readiness`  | Not started                                                                                                           |
 
 ## Phase 1 (merged)
 
