@@ -14,12 +14,15 @@ const envSchema = z.object({
   GUARDIAN_API_KEY: optionalKey,
   NYT_API_KEY: optionalKey,
   NEWSAPI_API_KEY: optionalKey,
+  DEMO_NOW: z.iso.datetime({ offset: true }).optional(),
 })
 
 export interface ServerConfig {
   mode: NewsMode
   port: number
   apiKeys: Record<ProviderId, string | undefined>
+  /** Fixed reference time for Demo timestamps, in milliseconds. */
+  demoNow?: number
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
@@ -29,8 +32,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     throw new Error(`Invalid server environment: ${fields.join(', ')}`)
   }
 
-  const { NEWS_MODE, PORT, GUARDIAN_API_KEY, NYT_API_KEY, NEWSAPI_API_KEY } =
-    parsed.data
+  const {
+    NEWS_MODE,
+    PORT,
+    GUARDIAN_API_KEY,
+    NYT_API_KEY,
+    NEWSAPI_API_KEY,
+    DEMO_NOW,
+  } = parsed.data
   return {
     mode: NEWS_MODE,
     port: PORT,
@@ -39,5 +48,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
       nyt: NYT_API_KEY,
       newsapi: NEWSAPI_API_KEY,
     },
+    ...(DEMO_NOW && { demoNow: Date.parse(DEMO_NOW) }),
   }
 }

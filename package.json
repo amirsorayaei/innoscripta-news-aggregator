@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "pnpm run --parallel \"/^dev:/\"",
     "dev:client": "vite",
-    "dev:server": "tsx watch src/server/index.ts",
+    "dev:server": "tsx watch --env-file-if-exists=.env src/server/index.ts",
     "build": "pnpm typecheck && pnpm build:client && pnpm build:server",
     "build:client": "vite build",
     "build:server": "tsup",
-    "start": "node dist/server/index.js",
+    "start": "node --env-file-if-exists=.env dist/server/index.js",
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -19,7 +19,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "preview": "pnpm build && pnpm start",
-    "prepare": "husky"
+    "prepare": "husky",
+    "smoke:live": "tsx --env-file-if-exists=.env scripts/smoke-live.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

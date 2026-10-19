@@ -63,6 +63,15 @@ jobs:
           curl --fail --silent http://localhost:8080/api/health | grep -q '"mode":"demo"'
           curl --fail --silent http://localhost:8080/preferences | grep -q '<div id="root">'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8080/api/unknown)" = 404
+      - name: Check the Demo feed and its pagination
+        run: |
+          feed=$(curl --fail --silent 'http://localhost:8080/api/feed?source=guardian&source=nyt')
+          echo "$feed" | jq -e '.mode == "demo" and (.articles | length) > 0 and (.nextCursor | type) == "string"'
+          cursor=$(echo "$feed" | jq -r .nextCursor)
+          curl --fail --silent --get --data-urlencode "cursor=$cursor" \
+            'http://localhost:8080/api/feed?source=guardian&source=nyt' \
+            | jq -e '.providerStatuses | length == 3'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://localhost:8080/api/feed?from=2026-02-30')" = 400
       - if: always()
         run: docker logs news-desk
 
