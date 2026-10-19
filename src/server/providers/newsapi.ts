@@ -40,6 +40,32 @@ const sourceCategories = new Map<string, Category>(
   ),
 )
 
+/**
+ * Requested source IDs whose articles come back under another publisher ID.
+ * Live check, 2026-10-20: `sources=bbc-sport` returned only `source.id: "bbc-news"`.
+ */
+export const newsApiSourceAliases: Record<string, string> = {
+  'bbc-sport': 'bbc-news',
+}
+
+/**
+ * Publisher category for an article, resolved against the sources that were
+ * actually requested. If the upstream ID could come from requested sources in
+ * different categories (BBC News and BBC Sport together), it stays unset.
+ */
+export function publisherCategoryFor(
+  sourceId: string | undefined,
+  requestedSources: string[],
+): Category | undefined {
+  if (!sourceId) return undefined
+  const categories = new Set(
+    requestedSources
+      .filter((id) => id === sourceId || newsApiSourceAliases[id] === sourceId)
+      .map((id) => sourceCategories.get(id)),
+  )
+  return categories.size === 1 ? [...categories][0] : undefined
+}
+
 /** Developer plan: articles up to one month old (newsapi.org/pricing). */
 export const NEWSAPI_HISTORY_DAYS = 30
 
@@ -96,10 +122,12 @@ export function buildNewsApiRequest(
   params.set('sortBy', 'publishedAt')
   params.set('pageSize', String(PAGE_SIZE))
   params.set('page', String(page))
-  return { url, notes }
+  return { url, notes, sources }
 }
 
-function mapArticle(item: unknown) {
+export type NewsApiRequest = ReturnType<typeof buildNewsApiRequest>
+
+function mapArticle(item: unknown, requestedSources: string[]) {
   const parsed = articleSchema.safeParse(item)
   if (!parsed.success) return undefined
   const article = parsed.data
@@ -116,7 +144,7 @@ function mapArticle(item: unknown) {
     authors: parseByline(article.author),
     providerId: 'newsapi',
     publisherName: article.source.name ?? 'Unknown publisher',
-    category: sourceId ? sourceCategories.get(sourceId) : undefined,
+    category: publisherCategoryFor(sourceId, requestedSources),
     categoryBasis: 'publisher',
   })
 }
@@ -140,14 +168,14 @@ function errorFor(status: number, body: unknown): Error {
 export function mapNewsApiResponse(
   body: unknown,
   page: number,
-  notes: ProviderNote[],
+  { notes, sources }: Pick<NewsApiRequest, 'notes' | 'sources'>,
 ): ProviderPage {
   const parsed = successSchema.safeParse(body)
   if (!parsed.success) throw new ProviderError('invalid_response')
   const { articles, totalResults } = parsed.data
 
   return {
-    articles: parseItems(articles, mapArticle),
+    articles: parseItems(articles, (item) => mapArticle(item, sources)),
     rawCount: articles.length,
     hasMore: page * PAGE_SIZE < totalResults && page < MAX_PAGE,
     notes,
@@ -167,13 +195,13 @@ export function createNewsApiAdapter(
         : undefined
     },
     async fetchPage(filters, page, signal) {
-      const { url, notes } = buildNewsApiRequest(filters, page, now())
+      const request = buildNewsApiRequest(filters, page, now())
       // The key goes in a header so it never appears in the URL.
-      const { status, body } = await getUpstreamJson(url, signal, {
+      const { status, body } = await getUpstreamJson(request.url, signal, {
         'X-Api-Key': apiKey,
       })
       if (status !== 200) throw errorFor(status, body)
-      return mapNewsApiResponse(body, page, notes)
+      return mapNewsApiResponse(body, page, request)
     },
   }
 }

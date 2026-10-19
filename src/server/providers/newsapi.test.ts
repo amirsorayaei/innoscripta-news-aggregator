@@ -14,6 +14,8 @@ import { ProviderLimitReached } from './types.js'
 
 const filters = (input: object = {}) => feedFiltersSchema.parse(input)
 const NOW = Date.parse('2026-10-19T12:00:00Z')
+const requestFor = (input: object = {}) =>
+  buildNewsApiRequest(filters(input), 1, NOW)
 
 describe('NewsAPI publisher categories', () => {
   it('exclude IDs missing from the live English catalogue', () => {
@@ -91,7 +93,11 @@ describe('NewsAPI availability', () => {
 
 describe('mapNewsApiResponse', () => {
   it('maps articles with publisher-based categories', () => {
-    const page = mapNewsApiResponse(newsApiResponse([newsApiArticle(1)]), 1, [])
+    const page = mapNewsApiResponse(
+      newsApiResponse([newsApiArticle(1)]),
+      1,
+      requestFor(),
+    )
     expect(page.articles[0]).toMatchObject({
       canonicalUrl: 'https://techcrunch.com/2026/10/19/synthetic-1/',
       summary: 'Description for synthetic story 1.',
@@ -109,7 +115,7 @@ describe('mapNewsApiResponse', () => {
         newsApiArticle(2, { title: '[Removed]', url: 'https://removed.com' }),
       ]),
       1,
-      [],
+      requestFor(),
     )
     expect(page.rawCount).toBe(2)
     expect(page.articles).toHaveLength(1)
@@ -118,12 +124,52 @@ describe('mapNewsApiResponse', () => {
   })
 
   it('computes more pages from totalResults', () => {
-    expect(mapNewsApiResponse(newsApiResponse([], 25), 2, []).hasMore).toBe(
-      true,
+    expect(
+      mapNewsApiResponse(newsApiResponse([], 25), 2, requestFor()).hasMore,
+    ).toBe(true)
+    expect(
+      mapNewsApiResponse(newsApiResponse([], 25), 3, requestFor()).hasMore,
+    ).toBe(false)
+  })
+})
+
+describe('NewsAPI publisher aliases', () => {
+  const bbcArticle = newsApiArticle(1, {
+    source: { id: 'bbc-news', name: 'BBC News' },
+  })
+  const categoryOf = (input: object) =>
+    mapNewsApiResponse(newsApiResponse([bbcArticle]), 1, requestFor(input))
+      .articles[0]
+
+  it('labels bbc-news articles from a sports-only request as sports', () => {
+    expect(categoryOf({ categories: ['sports'] })).toMatchObject({
+      category: 'sports',
+      categoryBasis: 'publisher',
+    })
+  })
+
+  it('keeps bbc-news articles from a general request as general', () => {
+    expect(categoryOf({ categories: ['general'] })).toMatchObject({
+      category: 'general',
+      categoryBasis: 'publisher',
+    })
+  })
+
+  it('leaves bbc-news unlabelled when both BBC sources were requested', () => {
+    for (const input of [{}, { categories: ['general', 'sports'] }]) {
+      const article = categoryOf(input)
+      expect(article?.category).toBeUndefined()
+      expect(article?.categoryBasis).toBe('unknown')
+    }
+  })
+
+  it('does not change other publishers', () => {
+    const page = mapNewsApiResponse(
+      newsApiResponse([newsApiArticle(1)]),
+      1,
+      requestFor({ categories: ['technology', 'sports'] }),
     )
-    expect(mapNewsApiResponse(newsApiResponse([], 25), 3, []).hasMore).toBe(
-      false,
-    )
+    expect(page.articles[0]?.category).toBe('technology')
   })
 })
 
@@ -170,6 +216,30 @@ describe('NewsAPI adapter over HTTP', () => {
     const error = await fetchPage().catch((e: unknown) => e)
     expect(error).toMatchObject({ code })
     expect(String(error)).not.toContain('Upstream detail')
+  })
+
+  it('labels BBC Sport results from a sports request as sports', async () => {
+    let sources: string | null = null
+    server.use(
+      http.get(endpoint, ({ request }) => {
+        sources = new URL(request.url).searchParams.get('sources')
+        return HttpResponse.json(
+          newsApiResponse([
+            newsApiArticle(1, { source: { id: 'bbc-news', name: 'BBC News' } }),
+          ]),
+        )
+      }),
+    )
+    const page = await createNewsApiAdapter('k', () => NOW).fetchPage(
+      filters({ categories: ['sports'] }),
+      1,
+      new AbortController().signal,
+    )
+    expect(sources).toBe('espn,bbc-sport,talksport')
+    expect(page.articles[0]).toMatchObject({
+      category: 'sports',
+      categoryBasis: 'publisher',
+    })
   })
 
   it('reports the plan result limit separately from errors', async () => {

@@ -99,9 +99,9 @@ function loaderFor(id: ProviderId): PageLoader {
       const res = await getUpstreamJson(buildNytUrl(filters, page, key), signal)
       return { ...res, map: () => mapNytResponse(res.body, page) }
     }
-    const { url, notes } = buildNewsApiRequest(filters, page, now)
-    const res = await getUpstreamJson(url, signal, { 'X-Api-Key': key })
-    return { ...res, map: () => mapNewsApiResponse(res.body, page, notes) }
+    const request = buildNewsApiRequest(filters, page, now)
+    const res = await getUpstreamJson(request.url, signal, { 'X-Api-Key': key })
+    return { ...res, map: () => mapNewsApiResponse(res.body, page, request) }
   }
 }
 
