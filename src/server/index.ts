@@ -2,9 +2,15 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createApp } from './app.js'
-import { loadConfig } from './config.js'
+import { loadConfig, type ServerConfig } from './config.js'
 
-const config = loadConfig()
+let config: ServerConfig
+try {
+  config = loadConfig()
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error)
+  process.exit(1)
+}
 const clientDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../client',
