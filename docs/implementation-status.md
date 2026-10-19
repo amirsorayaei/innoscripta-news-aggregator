@@ -78,7 +78,18 @@ Tooling, strict TypeScript, shadcn shell, health API, tests, Docker, CI and Verc
 
 ### Hosted (Vercel)
 
-Pending. This needs the merged code and Live provider keys configured on Vercel. Production stays in Demo mode, and no Vercel settings were changed.
+Pending. Checked on 2026-10-20 against project `innoscripta-news-aggregator` (`prj_sEpu…`) and https://innoscripta-news-aggregator-chi.vercel.app. Only names and scopes were inspected, never values.
+
+- **Env vars:** `GUARDIAN_API_KEY`, `NYT_API_KEY` and `NEWSAPI_API_KEY` are present for Production and Preview. They are stored as "Non-sensitive"; marking them Sensitive is recommended.
+- **`NEWS_MODE`:** not configured, so Production defaults to Demo.
+- **Production deployment:** `dpl_8rvSPLQrrewG5BUVoTjeUwewajFu`, from main `94751f0` (Phase 1), deployed by CI run 39318183359. It was built before the keys were added, and Vercel applies env changes only to new deployments.
+- **Live behaviour:** `/api/health` returns `mode: "demo"` with every provider `configured: false`, and no values are exposed. `/api/feed` returns a JSON 404 because Phase 2 is not deployed. No provider requests were made.
+
+To complete hosted verification:
+
+1. Add `NEWS_MODE=live` for Production.
+2. Merge PR #2. The main workflow then deploys through `vercel deploy --prebuilt --prod` and picks up the env vars.
+3. Re-check health, each provider individually, a combined feed and cursor pagination.
 
 ## Blockers and notes
 
