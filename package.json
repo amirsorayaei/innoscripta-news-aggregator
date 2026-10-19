@@ -19,7 +19,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "preview": "pnpm build && pnpm start",
-    "prepare": "husky"
+    "prepare": "husky",
+    "smoke:live": "tsx --env-file-if-exists=.env scripts/smoke-live.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

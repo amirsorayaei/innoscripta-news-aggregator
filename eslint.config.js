@@ -32,7 +32,13 @@ export default defineConfig([
     rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
-    files: ['src/server/**/*.ts', 'api/**/*.ts', 'e2e/**/*.ts', '*.config.ts'],
+    files: [
+      'src/server/**/*.ts',
+      'api/**/*.ts',
+      'scripts/**/*.ts',
+      'e2e/**/*.ts',
+      '*.config.ts',
+    ],
     languageOptions: { globals: globals.node },
   },
   eslintConfigPrettier,
