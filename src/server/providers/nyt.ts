@@ -100,7 +100,8 @@ function imageFor(multimedia: NytDoc['multimedia']) {
   const image = Array.isArray(multimedia)
     ? (multimedia.find((m) => m.subtype === 'xlarge') ?? multimedia[0])
     : multimedia?.default
-  if (!image?.url) return undefined
+  // Images are optional: an unparseable URL means "no image", not a bad article.
+  if (!image?.url || !URL.canParse(image.url, IMAGE_BASE)) return undefined
   return new URL(image.url, IMAGE_BASE).toString()
 }
 

@@ -54,6 +54,36 @@ describe('mapNytResponse', () => {
     })
   })
 
+  it.each([
+    ['object', { default: { url: 'http://[' } }],
+    ['legacy array', [{ url: 'http://[', subtype: 'xlarge' }]],
+  ])(
+    'treats a malformed %s image URL as missing and keeps neighbours',
+    (_shape, multimedia) => {
+      const page = mapNytResponse(
+        nytResponse([nytDoc(1, { multimedia }), nytDoc(2)]),
+        1,
+      )
+
+      expect(page.articles).toHaveLength(2)
+      expect(page.articles[0]?.title).toBe('Synthetic technology story 1')
+      expect(page.articles[0]?.imageUrl).toBeUndefined()
+      expect(page.articles[1]?.imageUrl).toBe(
+        'https://static01.nyt.com/images/2026/10/19/synthetic-2.jpg',
+      )
+    },
+  )
+
+  it('still drops documents missing required fields', () => {
+    const page = mapNytResponse(
+      nytResponse([nytDoc(1, { web_url: 'not a url' }), nytDoc(2)]),
+      1,
+    )
+    expect(page.articles.map((a) => a.title)).toEqual([
+      'Synthetic technology story 2',
+    ])
+  })
+
   it('uses hits and offset to detect more pages', () => {
     const docs = Array.from({ length: 10 }, (_, i) => nytDoc(i))
     expect(mapNytResponse(nytResponse(docs, 10, 25), 2).hasMore).toBe(true)
