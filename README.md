@@ -35,7 +35,7 @@ The server reads `NEWS_MODE` at startup:
 | `demo` (default) | Sample data only. No API keys and no outbound requests. A permanent badge shows Demo.             |
 | `live`           | Real provider requests. `GUARDIAN_API_KEY`, `NYT_API_KEY` and `NEWSAPI_API_KEY` are all required. |
 
-Copy `.env.example` to `.env` to configure Live mode for Docker. Keys are read only by the server and never use the `VITE_` prefix, so they are not bundled into the client.
+Copy `.env.example` to `.env` to configure Live mode. `pnpm dev`, `pnpm start` and `docker compose` load `.env` when it exists (Node's `--env-file-if-exists`), and variables already exported in the shell take precedence. Without `.env` the server starts in keyless Demo mode. Keys are read only by the server and never use the `VITE_` prefix, so they are not bundled into the client.
 
 `GET /api/health` reports the mode and whether each provider key is configured, without revealing any key.
 
