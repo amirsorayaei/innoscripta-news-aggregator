@@ -18,7 +18,7 @@ Data flow: URL or saved preferences → normalized filters → TanStack Query �
 - **Mode first:** `useFeedMode` waits for `/api/health`. If health fails, or Live mode is not ready, it shows an explicit panel and sends no feed request; it never guesses a mode.
 - **Query:** `useFeed(filters, mode)` wraps `useInfiniteQuery`. The key is `['feed', mode, serialized normalized filters]`, the page parameter is the server's opaque cursor, and the query's `AbortSignal` is passed to `fetch`. The global defaults apply: 5-minute stale time, no automatic retries, and no refetching on focus, mount or reconnect.
 - **Filter changes:** a new key means a new pagination stream with its own cursors. Previous results are never shown as placeholders, so a slow response for old filters can only land in the old cache entry.
-- **Load more:** `fetchNextPage({ cancelRefetch: false })`, ignored while a page is loading. A failed page is not stored, so retrying uses the same cursor and keeps the cards already loaded.
+- **Load more:** `fetchNextPage({ cancelRefetch: false })`, ignored while a page is loading. A failed page is not stored, and the loaded cards stay. A transient failure (network, 5xx, all providers failing) offers Load more again with the **same cursor**. A rejected cursor (400 `invalid_cursor`) cannot be retried, so the footer offers **Refresh** instead. The cards remain until the user chooses it.
 - **Refresh and retry:** `resetQueries` on the exact key, so only page one is fetched again rather than the whole old page chain.
 - **Merging** (`mergeArticles`): batches are merged by article ID, which is the server's hash of the canonical URL, so there are no client URL rules. The Guardian, then NYT, then NewsAPI copy wins. Missing summary, image, authors or category are filled from other copies, and a category keeps its basis. `providers` lists every provider that returned the article. Sorting is `publishedAt` descending, then ID. Every fetched article is shown; nothing is hidden to fake a global order.
 - **Feed state** (`summarizeFeed`): statuses and paused providers come from the latest batch, and notes from every batch. The footer then shows one of four states:
@@ -29,7 +29,7 @@ Data flow: URL or saved preferences → normalized filters → TanStack Query �
 
   The count is the number of unique articles shown.
 
-- **Scroll anchor:** before Load more, `useScrollAnchor` records the first article below the sticky mobile header and its viewport offset. After the merged list renders, it scrolls by however far that article moved. Native `overflow-anchor` is disabled on the grid so the two mechanisms don't stack.
+- **Scroll anchor:** `ScrollAnchor` wraps the grid and is armed while a next page loads. When the merged list arrives, `getSnapshotBeforeUpdate` reads the first article below the sticky mobile header and its viewport offset, using the layout the user sees at that moment, so scrolling during the request is respected. After the commit, it scrolls by however far that article moved. It never restores after a Refresh or across filter streams. Native `overflow-anchor` is disabled on the grid so the two mechanisms don't stack.
 - **Explore URL** (`exploreFiltersFromParams`): each value is checked on its own.
   - Dropped values: unknown sources and categories, impossible dates, and both dates of a reversed range. Authors and unknown parameters are ignored (Explore has no author filter).
   - Kept or adjusted: the keyword is truncated to 100 characters, and the remaining values are kept.

@@ -39,3 +39,9 @@ AI assistance was used openly throughout this project. This log records what it 
   - The React hooks lint rule flagged a ref read during render (replaced with state) and a test helper that reassigned an outer variable.
   - An import cycle in the new MSW test helpers was removed.
   - The scroll anchor stopped relying on `CSS.escape`, which jsdom lacks.
+- **Developer review findings, fixed by the agent with regression tests:**
+  - A long applied-search chip overflowed 320px screens.
+  - Load more restored a stale, click-time scroll position.
+  - `invalid_cursor` offered a retry of the rejected cursor.
+
+  While reproducing the first finding, the agent found that its earlier 320px checks compared `scrollWidth` with `innerWidth`, which mobile emulation widens. The checks now compare against the fixed 320px width.
