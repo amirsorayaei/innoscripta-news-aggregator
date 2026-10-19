@@ -6,7 +6,7 @@ _Last updated: 2026-10-20 (Asia/Tehran)._
 | ----- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                       |
 | 2     | `feat/news-providers`      | Merged (PR #2, merge commit `a78b110`); local and hosted Live verified, one non-blocking inconclusive observation |
-| 3     | `feat/explore-feed`        | Not started                                                                                                       |
+| 3     | `feat/explore-feed`        | PR open, awaiting review                                                                                          |
 | 4     | `feat/personalized-feed`   | Not started                                                                                                       |
 | 5     | `chore/release-readiness`  | Not started                                                                                                       |
 
@@ -97,6 +97,57 @@ Limitations observed: NewsAPI's newest article was about 24 hours older than Gua
 - The Playwright CDN is unreachable from the development machine, so local E2E uses the installed Chrome. CI uses Playwright's Chromium.
 - Node 22 is not installed locally, so Node 22 is exercised through Docker, CI and Vercel.
 
-## Next (phase 3, after approval)
+## Phase 3: Explore feed
 
-Explore page: article cards, search and filters with URL state, desktop and mobile filter UI, real Load more with scroll preservation, and request and empty-state UX.
+### Implemented
+
+- **Reusable feed** (`features/articles`):
+  - `useFeed` (infinite query keyed by mode and normalized filters, server cursors, guarded Load more, page-one Refresh);
+  - `useFeedMode` (no requests before the mode is known; explicit health and configuration failures);
+  - `mergeArticles` (canonical-ID dedupe, Guardian > NYT > NewsAPI, combined attribution, deterministic sort);
+  - feed state and messages built from real provider states, notes and error codes;
+  - a scroll anchor;
+  - cards, grid, skeletons, notices, footer and error panels.
+- **Explore** (`features/explore`):
+  - lenient URL sanitizing with one canonical form, and URL-backed filters with Back/Forward;
+  - 400 ms debounced search with an immediate Enter;
+  - desktop filters that apply when valid, and a mobile Sheet with draft, Apply, Cancel and Reset;
+  - connected date errors, and applied-filter chips with Clear all.
+- **API client:** `ApiError` now keeps the parsed error body, so the UI can show per-provider reasons for a 503.
+
+### Verification (local, 2026-10-20)
+
+- `pnpm format:check`, `lint`, `typecheck` and `build` pass.
+- `pnpm test` passes 206 tests in 22 files. New coverage:
+  - URL round-trip and sanitizing;
+  - Back/Forward with control sync;
+  - debounce, and Enter cancelling the pending commit;
+  - stale slow responses;
+  - desktop and mobile date validation without requests;
+  - mobile Apply, Cancel, Reset and Escape;
+  - merging, priority and attribution;
+  - cursor progression with double-click protection;
+  - pagination error and retry on the same cursor;
+  - Refresh from page one;
+  - sparse, paused, end, empty, full-failure, configuration and health states;
+  - the scroll anchor with reordered results under a sticky header.
+- `pnpm test:e2e` (local Chrome, production Demo build): 31 passed, 5 skipped by design. Explore coverage:
+  - search with reload and Back;
+  - URL sanitizing;
+  - desktop filters;
+  - Load more keeping the first visible card within 2px;
+  - the mobile Sheet draft, nav exclusivity and focus return;
+  - axe with results and with the Sheet open;
+  - 320px overflow.
+- **Layouts:** 1 column at 320 and 390px, 2 columns at 768, 1024 and 1279px, and 3 at 1280 and 1440px. There is no horizontal overflow at any width.
+- **Docker image (Demo):** health, feed and the Explore deep link were served.
+
+### Limitations
+
+- Demo articles have no images, so Demo always shows the image fallback; Live articles use provider images.
+- Explore ignores `author` URL parameters, because author filtering belongs to My Feed (phase 4).
+- Relative times use the time the grid mounted and do not tick while the page stays open.
+
+## Next (phase 4, after approval)
+
+Preferences with an explicit Save/Cancel, author selection and manual entry, validated local persistence, and My Feed built on the reusable article feed.

@@ -31,3 +31,11 @@ AI assistance was used openly throughout this project. This log records what it 
   - A malformed optional NYT image URL threw and dropped neighbouring articles.
 - **Developer decision:** keep Guardian OR'd tag filtering, with the tag mappings and mixed-category behaviour still to be verified with real keys.
 - **Live verification:** the developer ran the full real-key smoke and two targeted NewsAPI diagnostics. From that evidence, the agent removed the two catalogue-missing NewsAPI sources and added request-context handling for the BBC Sport alias, leaving ambiguous BBC results unlabelled. It then re-ran only the NewsAPI smoke: 11 passed and 1 inconclusive. The inconclusive mixed-category result was kept as is, not tuned into a pass.
+
+## Phase 3: Explore feed
+
+- **Developer:** defined the phase scope and acceptance criteria (URL state, debounce, mobile draft Sheet, merge priority, cursor pagination, scroll anchoring and UX states), and reviews and merges the PR.
+- **Claude Code (agent):** implemented the reusable article feed and the Explore page, wrote the unit, integration and Playwright tests, reviewed the UI through screenshots at several widths, and updated the docs. Corrections found during verification:
+  - The React hooks lint rule flagged a ref read during render (replaced with state) and a test helper that reassigned an outer variable.
+  - An import cycle in the new MSW test helpers was removed.
+  - The scroll anchor stopped relying on `CSS.escape`, which jsdom lacks.

@@ -9,7 +9,35 @@ One package with three source roots:
 | `src/client` | React app. It talks only to the BFF.                                                       |
 | `api/`       | Vercel function entry that exports the same Express app.                                   |
 
-Data flow: URL or saved preferences → normalized filters → TanStack Query → `GET /api/feed` → three adapters in parallel → shared response → client merge and sort → UI. The client side of this flow arrives in phases 3 and 4.
+Data flow: URL or saved preferences → normalized filters → TanStack Query → `GET /api/feed` → three adapters in parallel → shared response → client merge and sort → UI. Explore (phase 3) reads filters from the URL; My Feed (phase 4) will read them from saved preferences.
+
+## Client feed
+
+`src/client/features/articles` holds the reusable feed, and `src/client/features/explore` holds Explore's URL and filter behaviour.
+
+- **Mode first:** `useFeedMode` waits for `/api/health`. If health fails, or Live mode is not ready, it shows an explicit panel and sends no feed request; it never guesses a mode.
+- **Query:** `useFeed(filters, mode)` wraps `useInfiniteQuery`. The key is `['feed', mode, serialized normalized filters]`, the page parameter is the server's opaque cursor, and the query's `AbortSignal` is passed to `fetch`. The global defaults apply: 5-minute stale time, no automatic retries, and no refetching on focus, mount or reconnect.
+- **Filter changes:** a new key means a new pagination stream with its own cursors. Previous results are never shown as placeholders, so a slow response for old filters can only land in the old cache entry.
+- **Load more:** `fetchNextPage({ cancelRefetch: false })`, ignored while a page is loading. A failed page is not stored, so retrying uses the same cursor and keeps the cards already loaded.
+- **Refresh and retry:** `resetQueries` on the exact key, so only page one is fetched again rather than the whole old page chain.
+- **Merging** (`mergeArticles`): batches are merged by article ID, which is the server's hash of the canonical URL, so there are no client URL rules. The Guardian, then NYT, then NewsAPI copy wins. Missing summary, image, authors or category are filled from other copies, and a category keeps its basis. `providers` lists every provider that returned the article. Sorting is `publishedAt` descending, then ID. Every fetched article is shown; nothing is hidden to fake a global order.
+- **Feed state** (`summarizeFeed`): statuses and paused providers come from the latest batch, and notes from every batch. The footer then shows one of four states:
+  - **more:** a cursor exists;
+  - **sparse:** a cursor exists but the last batch added no articles;
+  - **end:** no cursor and no paused provider;
+  - **stopped:** no cursor, with providers paused.
+
+  The count is the number of unique articles shown.
+
+- **Scroll anchor:** before Load more, `useScrollAnchor` records the first article below the sticky mobile header and its viewport offset. After the merged list renders, it scrolls by however far that article moved. Native `overflow-anchor` is disabled on the grid so the two mechanisms don't stack.
+- **Explore URL** (`exploreFiltersFromParams`): each value is checked on its own.
+  - Dropped values: unknown sources and categories, impossible dates, and both dates of a reversed range. Authors and unknown parameters are ignored (Explore has no author filter).
+  - Kept or adjusted: the keyword is truncated to 100 characters, and the remaining values are kept.
+  - Canonical form: non-canonical URLs are replaced once with the canonical form, and applying filters pushes a history entry, so reload, sharing and Back/Forward restore the same filters.
+- **Search:** typing commits after 400 ms; Enter commits immediately and cancels the pending commit. A keyword applied elsewhere (Back, a removed chip) replaces the draft.
+- **Filters:**
+  - **Desktop:** filters apply when valid; an invalid date range shows an error and sends nothing.
+  - **Mobile:** the Sheet edits a copy of the applied filters. Apply commits it, while Cancel, Escape or dismissal discard it, and Reset clears only the copy.
 
 ## Feed API
 
