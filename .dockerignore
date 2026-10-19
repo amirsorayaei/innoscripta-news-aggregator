@@ -1,0 +1,15 @@
+.git
+.github
+.husky
+.vercel
+.env
+.env.*
+!.env.example
+node_modules
+dist
+coverage
+playwright-report
+test-results
+*.log
+Dockerfile
+docker-compose.yml

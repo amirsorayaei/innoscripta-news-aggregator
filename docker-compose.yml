@@ -1,0 +1,11 @@
+services:
+  news-desk:
+    build: .
+    image: news-desk
+    ports:
+      - '${HOST_PORT:-8080}:8080'
+    # Optional: copy .env.example to .env and set NEWS_MODE=live plus all keys.
+    env_file:
+      - path: .env
+        required: false
+    init: true
