@@ -19,19 +19,26 @@ describe('describeFeedError', () => {
       new ApiError(503, 'all_providers_failed', 'x', body),
     )
     expect(description.details).toEqual(['The Guardian: Rate limit reached.'])
-    expect(description.retryable).toBe(true)
+    expect(description.recovery).toBe('retry')
+  })
+
+  it('asks for a refresh when the cursor is rejected', () => {
+    const description = describeFeedError(
+      new ApiError(400, 'invalid_cursor', 'Cursor rejected.'),
+    )
+    expect(description.recovery).toBe('refresh')
   })
 
   it('does not offer a retry for missing configuration', () => {
     const description = describeFeedError(
       new ApiError(503, 'configuration_error', 'Missing keys'),
     )
-    expect(description.retryable).toBe(false)
+    expect(description.recovery).toBe('none')
   })
 
   it('treats network failures as retryable', () => {
-    expect(describeFeedError(new TypeError('fetch failed')).retryable).toBe(
-      true,
+    expect(describeFeedError(new TypeError('fetch failed')).recovery).toBe(
+      'retry',
     )
   })
 })

@@ -71,12 +71,12 @@ function FeedResults({ filters, mode, emptyAction }: FeedResultsProps) {
   }
 
   if (query.isError && !summary) {
-    const { title, details, retryable } = describeFeedError(query.error)
+    const { title, details, recovery } = describeFeedError(query.error)
     return (
       <FeedErrorPanel
         title={title}
         details={details}
-        onRetry={retryable ? refresh : undefined}
+        onRetry={recovery === 'none' ? undefined : refresh}
       />
     )
   }

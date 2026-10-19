@@ -20,6 +20,16 @@ export function FeedFooter({
   onRefresh,
 }: FeedFooterProps) {
   const end = feedEnd(summary)
+  const refreshButton = (
+    <Button
+      size="lg"
+      variant="outline"
+      className="min-h-11"
+      onClick={onRefresh}
+    >
+      Refresh
+    </Button>
+  )
   const loadMoreButton = (
     <Button
       size="lg"
@@ -35,7 +45,7 @@ export function FeedFooter({
   )
 
   if (loadMoreError && !isLoadingMore) {
-    const { title, details } = describeFeedError(loadMoreError)
+    const { title, details, recovery } = describeFeedError(loadMoreError)
     return (
       <FooterBox>
         <div role="alert" className="text-sm">
@@ -49,7 +59,9 @@ export function FeedFooter({
         <p className="text-sm text-muted-foreground">
           Articles already shown stay available.
         </p>
-        {loadMoreButton}
+        {/* A rejected cursor cannot be retried; transient failures retry the same cursor. */}
+        {recovery === 'refresh' && refreshButton}
+        {recovery === 'retry' && loadMoreButton}
       </FooterBox>
     )
   }
@@ -78,14 +90,7 @@ export function FeedFooter({
           No more articles from the available sources. {names} paused during
           this search; refresh to try again.
         </p>
-        <Button
-          size="lg"
-          variant="outline"
-          className="min-h-11"
-          onClick={onRefresh}
-        >
-          Refresh
-        </Button>
+        {refreshButton}
       </FooterBox>
     )
   }

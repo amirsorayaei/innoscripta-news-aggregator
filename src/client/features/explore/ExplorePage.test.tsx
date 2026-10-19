@@ -266,6 +266,42 @@ describe('Explore pagination', () => {
     expect(queriesSent('cursor')).toEqual([null, 'page-2', 'page-2'])
   })
 
+  it('offers Refresh, not a retry of the same cursor, when the cursor is rejected', async () => {
+    const pages = twoPages()
+    server.use(
+      feedHandler((url) =>
+        url.searchParams.get('cursor')
+          ? HttpResponse.json(
+              {
+                error: { code: 'invalid_cursor', message: 'Cursor rejected.' },
+              },
+              { status: 400 },
+            )
+          : pages(url),
+      ),
+    )
+    const { user } = await renderExplore('/explore?category=health')
+    await screen.findByText('Showing 10 articles')
+
+    await user.click(screen.getByRole('button', { name: 'Load more' }))
+    expect(
+      await screen.findByText(/These results are out of date/),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Load more' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('first story 0')).toBeInTheDocument()
+
+    const refreshButtons = screen.getAllByRole('button', { name: 'Refresh' })
+    await user.click(refreshButtons.at(-1)!)
+    await screen.findByText('Showing 10 articles')
+    expect(feedRequests.map((url) => url.search)).toEqual([
+      '?category=health',
+      '?category=health&cursor=page-2',
+      '?category=health',
+    ])
+  })
+
   it('refresh restarts from the first page only', async () => {
     server.use(feedHandler(twoPages()))
     const { user } = await renderExplore()

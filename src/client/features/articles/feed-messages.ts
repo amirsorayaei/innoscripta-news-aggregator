@@ -31,8 +31,12 @@ export function pausedMessage(status: ProviderStatus) {
 export interface FeedErrorDescription {
   title: string
   details: string[]
-  /** False when retrying cannot help, e.g. missing server configuration. */
-  retryable: boolean
+  /**
+   * `retry`: repeat the same request (a failed page keeps its cursor).
+   * `refresh`: start over from page one; the cursor itself was rejected.
+   * `none`: retrying cannot help, e.g. missing server configuration.
+   */
+  recovery: 'retry' | 'refresh' | 'none'
 }
 
 export function describeFeedError(error: unknown): FeedErrorDescription {
@@ -40,7 +44,7 @@ export function describeFeedError(error: unknown): FeedErrorDescription {
     return {
       title: 'Couldn’t reach the News Desk server.',
       details: ['Check your connection and try again.'],
-      retryable: true,
+      recovery: 'retry',
     }
   }
 
@@ -48,7 +52,7 @@ export function describeFeedError(error: unknown): FeedErrorDescription {
     return {
       title: 'Live news isn’t configured on this server.',
       details: ['The server is missing provider API keys.'],
-      retryable: false,
+      recovery: 'none',
     }
   }
 
@@ -59,7 +63,7 @@ export function describeFeedError(error: unknown): FeedErrorDescription {
     return {
       title: 'None of the news sources could be reached.',
       details: paused.map(pausedMessage),
-      retryable: true,
+      recovery: 'retry',
     }
   }
 
@@ -67,9 +71,13 @@ export function describeFeedError(error: unknown): FeedErrorDescription {
     return {
       title: 'These results are out of date.',
       details: ['Refresh to start again with the current filters.'],
-      retryable: true,
+      recovery: 'refresh',
     }
   }
 
-  return { title: error.message, details: [], retryable: error.status >= 500 }
+  return {
+    title: error.message,
+    details: [],
+    recovery: error.status >= 500 ? 'retry' : 'none',
+  }
 }
