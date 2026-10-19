@@ -8,7 +8,12 @@ import {
   pagedAdapter,
   stubArticle,
 } from '../test/stub-adapters.js'
-import { encodeCursor, InvalidCursorError } from './cursor.js'
+import {
+  encodeCursor,
+  filtersFingerprint,
+  InvalidCursorError,
+  type FeedProgress,
+} from './cursor.js'
 import { createFeedService } from './feed-service.js'
 import { PageCache } from './page-cache.js'
 
@@ -347,5 +352,85 @@ describe('feed service cursors', () => {
     await expect(
       feed.getFeed(filters(), cursor, signal()),
     ).rejects.toBeInstanceOf(InvalidCursorError)
+  })
+})
+
+describe('feed service cursor eligibility', () => {
+  const guardianOnly = filters({ sources: ['guardian'] })
+  const cursorFor = (f: typeof guardianOnly, progress: FeedProgress) =>
+    encodeCursor(filtersFingerprint('demo', f), progress)
+
+  it('rejects a cursor that activates an excluded provider before fetching', async () => {
+    const all = adapters()
+    const feed = createFeedService({ mode: 'demo', adapters: all })
+    const cursor = cursorFor(guardianOnly, {
+      guardian: { s: 'next', page: 2 },
+      nyt: { s: 'next', page: 1 },
+      newsapi: { s: 'skipped', note: 'not_selected' },
+    })
+
+    await expect(
+      feed.getFeed(guardianOnly, cursor, signal()),
+    ).rejects.toBeInstanceOf(InvalidCursorError)
+    expect(all.nyt.fetchPage).not.toHaveBeenCalled()
+    expect(all.guardian.fetchPage).not.toHaveBeenCalled()
+  })
+
+  it('rejects a cursor that activates an unavailable provider', async () => {
+    const newsapi = {
+      ...pagedAdapter('newsapi'),
+      unavailableFor: () => 'date_out_of_range' as const,
+    }
+    const feed = createFeedService({
+      mode: 'demo',
+      adapters: adapters({ newsapi }),
+    })
+    const cursor = cursorFor(filters(), {
+      guardian: { s: 'next', page: 2 },
+      nyt: { s: 'next', page: 2 },
+      newsapi: { s: 'next', page: 2 },
+    })
+
+    await expect(
+      feed.getFeed(filters(), cursor, signal()),
+    ).rejects.toBeInstanceOf(InvalidCursorError)
+    expect(newsapi.fetchPage).not.toHaveBeenCalled()
+  })
+
+  it('rejects a cursor that marks an eligible provider as skipped', async () => {
+    const feed = createFeedService({ mode: 'demo', adapters: adapters() })
+    const cursor = cursorFor(filters(), {
+      guardian: { s: 'next', page: 2 },
+      nyt: { s: 'skipped', note: 'not_selected' },
+      newsapi: { s: 'next', page: 2 },
+    })
+
+    await expect(
+      feed.getFeed(filters(), cursor, signal()),
+    ).rejects.toBeInstanceOf(InvalidCursorError)
+  })
+
+  it('accepts paused, exhausted and skipped states that match the filters', async () => {
+    const all = adapters()
+    const feed = createFeedService({ mode: 'demo', adapters: all })
+    const f = filters({ sources: ['guardian', 'nyt'] })
+    const cursor = cursorFor(f, {
+      guardian: { s: 'next', page: 3 },
+      nyt: { s: 'paused', code: 'rate_limited' },
+      newsapi: { s: 'skipped', note: 'not_selected' },
+    })
+
+    const body = okBody(await feed.getFeed(f, cursor, signal()))
+    expect(body.providerStatuses.map((s) => s.state)).toEqual([
+      'exhausted',
+      'paused',
+      'skipped',
+    ])
+    expect(all.guardian.fetchPage).toHaveBeenCalledWith(
+      expect.anything(),
+      3,
+      expect.anything(),
+    )
+    expect(all.nyt.fetchPage).not.toHaveBeenCalled()
   })
 })

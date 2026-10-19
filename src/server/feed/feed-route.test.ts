@@ -84,6 +84,23 @@ describe('GET /api/feed in Demo mode', () => {
     expect(response.body.error.fields).toEqual(['from'])
   })
 
+  it('rejects a tampered cursor that activates an excluded provider', async () => {
+    const first = await request(app).get('/api/feed?source=guardian')
+    const payload = JSON.parse(
+      Buffer.from(first.body.nextCursor, 'base64url').toString('utf8'),
+    )
+    payload.p.nyt = { s: 'next', page: 1 }
+    const tampered = Buffer.from(JSON.stringify(payload)).toString('base64url')
+
+    const response = await request(app)
+      .get('/api/feed')
+      .query({ source: 'guardian', cursor: tampered })
+
+    expect(response.status).toBe(400)
+    expect(response.body.error.code).toBe('invalid_cursor')
+    expect(response.body.articles).toBeUndefined()
+  })
+
   it('rejects a cursor that does not match the filters', async () => {
     const first = await request(app).get('/api/feed?q=storm')
     const response = await request(app)

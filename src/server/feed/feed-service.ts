@@ -25,6 +25,7 @@ import {
   decodeCursor,
   encodeCursor,
   filtersFingerprint,
+  InvalidCursorError,
   type FeedProgress,
   type ProviderProgress,
 } from './cursor.js'
@@ -109,9 +110,9 @@ export function createFeedService({
     signal: AbortSignal,
   ): Promise<FeedResult> {
     const fingerprint = filtersFingerprint(mode, filters)
-    const progress = cursor
-      ? decodeCursor(cursor, fingerprint)
-      : initialProgress(filters)
+    const allowed = initialProgress(filters)
+    const progress = cursor ? decodeCursor(cursor, fingerprint) : allowed
+    if (cursor) assertEligible(progress, allowed)
 
     const results = await Promise.all(
       providerIds.map(async (id) => {
@@ -225,6 +226,23 @@ function summarize(
     next: page.hasMore
       ? { s: 'next', page: current.page + 1 }
       : { s: 'exhausted' },
+  }
+}
+
+/**
+ * Cursors are unsigned, so their progress must agree with what the current
+ * filters allow: excluded or unavailable providers stay skipped, and eligible
+ * ones cannot be marked skipped. Checked before any adapter is called.
+ */
+function assertEligible(progress: FeedProgress, allowed: FeedProgress) {
+  for (const id of providerIds) {
+    const expected = allowed[id]
+    const actual = progress[id]
+    const consistent =
+      expected.s === 'skipped'
+        ? actual.s === 'skipped' && actual.note === expected.note
+        : actual.s !== 'skipped'
+    if (!consistent) throw new InvalidCursorError()
   }
 }
 
