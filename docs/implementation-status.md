@@ -2,13 +2,13 @@
 
 _Last updated: 2026-10-20 (Asia/Tehran)._
 
-| Phase | Branch                     | Status                                                                                                                |
-| ----- | -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                           |
-| 2     | `feat/news-providers`      | [Draft PR #2](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/2); real-provider verification pending |
-| 3     | `feat/explore-feed`        | Not started                                                                                                           |
-| 4     | `feat/personalized-feed`   | Not started                                                                                                           |
-| 5     | `chore/release-readiness`  | Not started                                                                                                           |
+| Phase | Branch                     | Status                                                                                                                                                                 |
+| ----- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                                                                            |
+| 2     | `feat/news-providers`      | [Draft PR #2](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/2); local Live verified, NewsAPI mixed-category check inconclusive, hosted Live pending |
+| 3     | `feat/explore-feed`        | Not started                                                                                                                                                            |
+| 4     | `feat/personalized-feed`   | Not started                                                                                                                                                            |
+| 5     | `chore/release-readiness`  | Not started                                                                                                                                                            |
 
 ## Phase 1 (merged)
 
@@ -38,20 +38,51 @@ Tooling, strict TypeScript, shadcn shell, health API, tests, Docker, CI and Verc
 ## Phase 2: automated verification (local, 2026-10-20)
 
 - `pnpm format:check`, `lint`, `typecheck` and `build` pass.
-- `pnpm test` passes 152 tests in 15 files. Coverage includes filter and date validation, normalization, all three request builders and mappers, auth, rate-limit and invalid-response handling, partial and total failure, timeout, client-disconnect cancellation, cache and secret redaction, Demo determinism and pagination, and incomplete Live config.
+- `pnpm test` passes 158 tests in 15 files. Coverage includes filter and date validation, normalization, all three request builders and mappers, auth, rate-limit and invalid-response handling, partial and total failure, timeout, client-disconnect cancellation, cache and secret redaction, Demo determinism and pagination, and incomplete Live config.
 - `pnpm test:e2e` (local Chrome): 20 passed, 2 skipped by design.
 - Docker image (Demo): health, deep links, API 404, Demo feed, cursor follow-up and a 400 for an invalid date all pass.
 
 ## Phase 2: real-provider verification
 
-- **Local:** pending. No provider keys were available in the local `.env`. A harness check with deliberately invalid keys reached all three APIs from the development machine (Guardian 401, NYT 401 `oauth.v2.InvalidApiKey`, NewsAPI 401 `apiKeyInvalid`), and each was mapped to `unauthorized`. One earlier NYT request returned an HTML 403 from Google's front end, but it did not reproduce.
-- **Hosted (Vercel):** pending. This needs the merged code and, for Live checks, provider keys in Vercel. Production stays in Demo mode, and no Vercel environment variables were changed.
+### Local Live: full run (commit `0b90380`, free keys, Node 24.14.0)
 
-To complete it, add the three free keys to `.env` and run `pnpm smoke:live --categories`. This makes at most 11 requests per provider plus one NewsAPI source-catalogue request (34 in total). It exits 0 only when every check passes, so inconclusive results still need review before the PR leaves draft.
+`pnpm smoke:live --categories` made 34 requests: 31 passed, 1 failed, 2 inconclusive (exit 1). Two extra targeted NewsAPI diagnostics were run (36 requests in total).
+
+- **The Guardian (11/11 passed):**
+  - Pages 1 and 2 each had 10 raw and 10 valid articles, and pagination advanced. Keyword with dates and all seven categories passed.
+  - Mixed business + health passed, with 3 health, 3 business and 4 other articles.
+  - The general check used the union of its tags and does not isolate each tag. An article's primary section can map to a different category than the tag used to find it.
+- **NYT (11/11 passed):**
+  - Pagination advanced, keyword with dates passed, and each category mapped 10/10.
+  - Mixed business + health returned 8 business and 2 health.
+  - `section.name` works, and responses use `multimedia.default` and `byline.original`.
+- **NewsAPI (9 passed, 1 failed, 2 inconclusive):**
+  - **Failed:** the catalogue check, because `reuters` and `entertainment-weekly` were absent.
+  - **Inconclusive:** sports was labelled general. A targeted `sources=bbc-sport` request returned 10 articles, all with `source.id: "bbc-news"`.
+  - **Inconclusive:** mixed business + health returned 10 business articles, while the separate health check returned 10 health articles.
+  - **Date clamp:** a targeted old start date (`2026-01-01`) was clamped to `2026-09-19`, and the API returned HTTP 200 with 10 articles. That covers this key on that date only.
+
+### Local Live: NewsAPI fixes and targeted rerun (2026-10-20)
+
+- **Fixes:** removed `reuters` and `entertainment-weekly`, leaving 16 curated sources. Added request-context category resolution with an explicit `bbc-sport` → `bbc-news` alias. BBC articles are sports for a sports-only request, general for a general-only request, and unlabelled when both BBC sources were requested.
+- **Rerun:** `pnpm smoke:live --provider=newsapi --categories` made 12 requests and returned **11 passed, 0 failed, 1 inconclusive** (exit 2).
+  - Pagination advanced: pages 1 and 2 each had 10 raw and 10 valid articles.
+  - The keyword with dates check passed.
+  - Every curated source was present in the catalogue.
+  - All seven categories mapped 10/10, including **sports 10/10**.
+- **Still inconclusive:** mixed business + health. The newest page held 10 business articles and no health. The separate health check passed, so this alone does not show an OR-filtering bug. It stays inconclusive; there are no quotas, reordering or extra pages to force a result.
+- **Observations:**
+  - The unfiltered pages had 4/10 and 8/10 unlabelled articles. This fits the deliberate rule that leaves BBC articles unlabelled when both BBC sources are requested, but it was not attributed per article.
+  - Publisher categories are not article topics. The general sample was a football story from BBC News, and the science sample was a travel story from National Geographic.
+  - Guardian and NYT were not re-run. Their results above are from the full run.
+
+### Hosted (Vercel)
+
+Pending. This needs the merged code and Live provider keys configured on Vercel. Production stays in Demo mode, and no Vercel settings were changed.
 
 ## Blockers and notes
 
-- Free provider keys are needed to verify the live schemas, mappings and pagination. The Guardian's public `test` key no longer works (HTTP 401).
+- Mixed business + health on NewsAPI is unresolved (inconclusive), as described above.
 - NewsAPI Developer terms allow development and testing only. A successful hosted request does not change that.
 - The Playwright CDN is unreachable from the development machine, so local E2E uses the installed Chrome. CI uses Playwright's Chromium.
 - Node 22 is not installed locally, so Node 22 is exercised through Docker, CI and Vercel.

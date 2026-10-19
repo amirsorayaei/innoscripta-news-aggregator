@@ -113,6 +113,10 @@ The adapter contract is `fetchPage(filters, page, signal) → { articles, rawCou
 - **Search window:** the Developer plan searches articles up to one month old ([pricing](https://newsapi.org/pricing)). A range that ends before that window is `skipped` (`date_out_of_range`). An older start date is moved forward with the note `date_range_clamped`.
 - **Result limit:** the `maximumResultsReached` error ends paging as `exhausted` with `result_limit_reached`. The adapter does not assume a fixed limit.
 - **Removed articles:** `[Removed]` placeholders are dropped.
+- **Publisher aliases:** categories are resolved against the sources actually requested. A live check on 2026-10-20 showed that `sources=bbc-sport` returns articles with `source.id: "bbc-news"`, so `bbc-sport` is listed as an alias of `bbc-news`.
+  - A sports-only request labels BBC articles as sports.
+  - A general-only request labels them general.
+  - When both BBC sources are requested (no category filter, or general + sports), the publisher category is ambiguous, so those articles get no category (`categoryBasis: "unknown"`) rather than a guess.
 
 | Category      | Sources                              |
 | ------------- | ------------------------------------ |
@@ -126,12 +130,16 @@ The adapter contract is `fetchPage(filters, page, signal) → { articles, rawCou
 
 ### Verification status
 
-The mappings above follow provider documentation and tested fixtures, but still need confirmation against real keys (`pnpm smoke:live --categories`). Pending checks:
+Local Live verification with free keys on 2026-10-20 (`pnpm smoke:live --categories`):
 
-- Guardian tag coverage, especially `culture/culture`, `uk/uk` and `society/health`.
-- The NYT `section.name` filter field and current document shape.
-- Whether the NewsAPI curated sources exist and still publish.
-- Whether a mixed business + health request returns both categories, which confirms OR rather than AND behaviour.
+- **The Guardian:** every check passed, including pagination, keyword with dates, all seven tag-based categories and mixed business + health, where both categories appeared. The general check used the union of its tags, so it does not prove each general tag on its own. A tag-filtered article's primary section can map to a different category.
+- **NYT:** every check passed. `section.name` filtering works, each category page mapped 10/10 to its category, and mixed business + health returned both. Responses use the current shape (`multimedia.default`, `byline.original`).
+- **NewsAPI:**
+  - **Catalogue:** `reuters` and `entertainment-weekly` were missing from the English catalogue and were removed.
+  - **Sports:** sports results came back as `bbc-news`, which led to the alias handling above.
+  - **Rerun:** after both fixes, the NewsAPI-only rerun passed every check except mixed business + health, which stays inconclusive (see `docs/implementation-status.md`).
+
+Hosted (Vercel) Live behaviour has not been verified.
 
 `pnpm smoke:live` gives each check a verdict:
 

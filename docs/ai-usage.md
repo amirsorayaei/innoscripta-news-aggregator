@@ -30,3 +30,4 @@ AI assistance was used openly throughout this project. This log records what it 
   - A tampered cursor could re-enable a provider that the source filter excluded.
   - A malformed optional NYT image URL threw and dropped neighbouring articles.
 - **Developer decision:** keep Guardian OR'd tag filtering, with the tag mappings and mixed-category behaviour still to be verified with real keys.
+- **Live verification:** the developer ran the full real-key smoke and two targeted NewsAPI diagnostics. From that evidence, the agent removed the two catalogue-missing NewsAPI sources and added request-context handling for the BBC Sport alias, leaving ambiguous BBC results unlabelled. It then re-ran only the NewsAPI smoke: 11 passed and 1 inconclusive. The inconclusive mixed-category result was kept as is, not tuned into a pass.
