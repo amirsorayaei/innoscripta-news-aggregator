@@ -2,13 +2,13 @@
 
 _Last updated: 2026-10-20 (Asia/Tehran)._
 
-| Phase | Branch                     | Status                                                                                                                                                                            |
-| ----- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                                                                                       |
-| 2     | `feat/news-providers`      | [PR #2](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/2) ready for review; local Live verified, one non-blocking inconclusive observation, hosted Live pending |
-| 3     | `feat/explore-feed`        | Not started                                                                                                                                                                       |
-| 4     | `feat/personalized-feed`   | Not started                                                                                                                                                                       |
-| 5     | `chore/release-readiness`  | Not started                                                                                                                                                                       |
+| Phase | Branch                     | Status                                                                                                            |
+| ----- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                       |
+| 2     | `feat/news-providers`      | Merged (PR #2, merge commit `a78b110`); local and hosted Live verified, one non-blocking inconclusive observation |
+| 3     | `feat/explore-feed`        | Not started                                                                                                       |
+| 4     | `feat/personalized-feed`   | Not started                                                                                                       |
+| 5     | `chore/release-readiness`  | Not started                                                                                                       |
 
 ## Phase 1 (merged)
 
@@ -76,25 +76,23 @@ Tooling, strict TypeScript, shadcn shell, health API, tests, Docker, CI and Verc
   - Publisher categories are not article topics. The general sample was a football story from BBC News, and the science sample was a travel story from National Geographic.
   - Guardian and NYT were not re-run. Their results above are from the full run.
 
-### Hosted (Vercel)
+### Hosted (Vercel): verified 2026-10-20
 
-Pending. Checked on 2026-10-20 against project `innoscripta-news-aggregator` (`prj_sEpu…`) and https://innoscripta-news-aggregator-chi.vercel.app. Only names and scopes were inspected, never values.
+**Passed.** Production https://innoscripta-news-aggregator-chi.vercel.app serves deployment `dpl_AF3VPxHwqcg7JfkNzjzRc2KABwzf` (`3li8ymukr`). The deploy job of main CI run 39332635015 built it from the Phase 2 merge `a78b1100a401e3abd785bc1cff38138fea789fe9`. Quality, E2E, Docker smoke and Deploy production all succeeded.
 
-- **Env vars:** `GUARDIAN_API_KEY`, `NYT_API_KEY` and `NEWSAPI_API_KEY` are present for Production and Preview. They are stored as "Non-sensitive"; marking them Sensitive is recommended.
-- **`NEWS_MODE`:** not configured, so Production defaults to Demo.
-- **Production deployment:** `dpl_8rvSPLQrrewG5BUVoTjeUwewajFu`, from main `94751f0` (Phase 1), deployed by CI run 39318183359. It was built before the keys were added, and Vercel applies env changes only to new deployments.
-- **Live behaviour:** `/api/health` returns `mode: "demo"` with every provider `configured: false`, and no values are exposed. `/api/feed` returns a JSON 404 because Phase 2 is not deployed. No provider requests were made.
+- **Configuration:** `NEWS_MODE`, `GUARDIAN_API_KEY`, `NYT_API_KEY` and `NEWSAPI_API_KEY` are scoped to Production on project `innoscripta-news-aggregator`. Only names and scopes were inspected. An earlier check showed the keys stored as "Non-sensitive"; marking them Sensitive is recommended.
+- **Health:** `/api/health` returns 200 with `mode: "live"`, `ready: true` and all three providers `configured: true`. No values are exposed.
+- **One provider per request** (`source=guardian`, `source=nyt`, `source=newsapi`): each returned 200, `mode: "live"`, the selected provider `ok` with 10 raw and 10 matched articles, and the other two `skipped` (`not_selected`). Articles came from real hosts: theguardian.com, nytimes.com, and bbc.co.uk, bloomberg.com, fortune.com, buzzfeed.com, techcrunch.com and ign.com for NewsAPI.
+- **Combined page 1** (no filters): 200 with 30 articles, 10 per provider. All three providers were `ok` with 10 raw and 10 matched. Articles were newest first, and a cursor was returned.
+- **Cursor follow-up:** 200 with 30 new articles, 10 per provider, all `ok`. None repeated from page 1, and a new cursor was returned.
+- **No Demo fallback:** every response reported `mode: "live"`, and no article used a Demo `example.*` host.
+- **Request budget:** 6 feed requests, with 3 NYT requests spaced at least 13 seconds apart. The category suite was not re-run.
 
-To complete hosted verification:
-
-1. Add `NEWS_MODE=live` for Production.
-2. Merge PR #2. The main workflow then deploys through `vercel deploy --prebuilt --prod` and picks up the env vars.
-3. Re-check health, each provider individually, a combined feed and cursor pagination.
+Limitations observed: NewsAPI's newest article was about 24 hours older than Guardian's and NYT's, consistent with the free plan's delay. Hosted responses rely on per-instance caching, and free-tier quotas still apply.
 
 ## Blockers and notes
 
 - NewsAPI mixed business + health stays an inconclusive smoke verdict. It is documented and non-blocking (see above).
-- Hosted (Vercel) Live verification is pending.
 - NewsAPI Developer terms allow development and testing only. A successful hosted request does not change that.
 - The Playwright CDN is unreachable from the development machine, so local E2E uses the installed Chrome. CI uses Playwright's Chromium.
 - Node 22 is not installed locally, so Node 22 is exercised through Docker, CI and Vercel.
