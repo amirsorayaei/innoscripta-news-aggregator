@@ -10,7 +10,7 @@ import { FeedNotices } from './FeedNotices'
 import { describeFeedError } from './feed-messages'
 import { feedQueryKey, useFeed } from './use-feed'
 import { useFeedMode } from './use-feed-mode'
-import { useScrollAnchor } from './use-scroll-anchor'
+import { ScrollAnchor } from './ScrollAnchor'
 
 interface ArticleFeedProps {
   filters: FeedFilters
@@ -57,7 +57,6 @@ interface FeedResultsProps extends ArticleFeedProps {
 
 function FeedResults({ filters, mode, emptyAction }: FeedResultsProps) {
   const { query, articles, summary, loadMore, refresh } = useFeed(filters, mode)
-  const captureAnchor = useScrollAnchor(articles)
   const key = feedQueryKey(mode, filters).join('|')
   const [firstKey] = useState(key)
 
@@ -119,7 +118,13 @@ function FeedResults({ filters, mode, emptyAction }: FeedResultsProps) {
           {emptyAction}
         </div>
       ) : (
-        <ArticleGrid articles={articles} />
+        <ScrollAnchor
+          items={articles}
+          armed={query.isFetchingNextPage}
+          stream={key}
+        >
+          <ArticleGrid articles={articles} />
+        </ScrollAnchor>
       )}
 
       {(count > 0 || summary.hasMore) && (
@@ -127,10 +132,7 @@ function FeedResults({ filters, mode, emptyAction }: FeedResultsProps) {
           summary={summary}
           isLoadingMore={query.isFetchingNextPage}
           loadMoreError={query.isFetchNextPageError ? query.error : undefined}
-          onLoadMore={() => {
-            captureAnchor()
-            loadMore()
-          }}
+          onLoadMore={loadMore}
           onRefresh={refresh}
         />
       )}

@@ -10,7 +10,7 @@ export function ArticleGrid({ articles }: { articles: FeedArticle[] }) {
   const [now] = useState(Date.now)
 
   return (
-    // Native scroll anchoring is off; useScrollAnchor restores position itself.
+    // Native scroll anchoring is off; ScrollAnchor restores the position itself.
     <ul className={`${GRID} [overflow-anchor:none]`}>
       {articles.map((article) => (
         <li key={article.id} data-article-id={article.id}>

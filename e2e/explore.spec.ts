@@ -11,6 +11,29 @@ async function openExplore(page: Page, path = '/explore') {
   await expect(results(page)).toBeVisible()
 }
 
+/** First article below the sticky header and its viewport offset. */
+const firstVisibleArticle = (page: Page) =>
+  page.evaluate(() => {
+    const header = document.querySelector('[data-sticky-header]')
+    const top = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0
+    const first = [
+      ...document.querySelectorAll<HTMLElement>('[data-article-id]'),
+    ].find((el) => el.getBoundingClientRect().bottom > top)!
+    return {
+      id: first.dataset.articleId!,
+      top: first.getBoundingClientRect().top,
+    }
+  })
+
+const articleTop = (page: Page, id: string) =>
+  page.evaluate(
+    (articleId) =>
+      [...document.querySelectorAll<HTMLElement>('[data-article-id]')]
+        .find((el) => el.dataset.articleId === articleId)!
+        .getBoundingClientRect().top,
+    id,
+  )
+
 async function expectNoSeriousViolations(page: Page) {
   const { violations } = await new AxeBuilder({ page }).analyze()
   const blocking = violations.filter(
@@ -74,31 +97,99 @@ test('Load more fetches the next page and keeps the reading position', async ({
   const before = await countOf(page)
   const loadMore = page.getByRole('button', { name: 'Load more' })
   await loadMore.scrollIntoViewIfNeeded()
-
-  const anchor = await page.evaluate(() => {
-    const header = document.querySelector('[data-sticky-header]')
-    const top = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0
-    const first = [
-      ...document.querySelectorAll<HTMLElement>('[data-article-id]'),
-    ].find((el) => el.getBoundingClientRect().bottom > top)!
-    return {
-      id: first.dataset.articleId!,
-      top: first.getBoundingClientRect().top,
-    }
-  })
+  const anchor = await firstVisibleArticle(page)
 
   await loadMore.click()
   await expect.poll(() => countOf(page)).toBeGreaterThan(before)
-
-  const after = await page.evaluate(
-    (id) =>
-      [...document.querySelectorAll<HTMLElement>('[data-article-id]')]
-        .find((el) => el.dataset.articleId === id)!
-        .getBoundingClientRect().top,
-    anchor.id,
-  )
-  expect(Math.abs(after - anchor.top)).toBeLessThanOrEqual(2)
+  expect(
+    Math.abs((await articleTop(page, anchor.id)) - anchor.top),
+  ).toBeLessThanOrEqual(2)
 })
+
+for (const scrollWhilePending of [false, true]) {
+  const when = scrollWhilePending
+    ? 'after scrolling during the request'
+    : 'when newer articles insert above'
+
+  test(`Load more keeps the reading position ${when}`, async ({ page }) => {
+    const providers = [
+      ['guardian', 'The Guardian'],
+      ['nyt', 'The New York Times'],
+      ['newsapi', 'Wire Desk'],
+    ] as const
+    const at = (minutes: number) =>
+      new Date(Date.UTC(2026, 9, 19, 12) + minutes * 60_000).toISOString()
+    const story = (
+      id: string,
+      providerId: string,
+      publisherName: string,
+      minutes: number,
+    ) => ({
+      id,
+      canonicalUrl: `https://news.test/${id}`,
+      url: `https://news.test/${id}`,
+      title: `Story ${id}`,
+      publishedAt: at(minutes),
+      authors: [],
+      providerId,
+      publisherName,
+      categoryBasis: 'unknown',
+    })
+    const statuses = providers.map(([providerId]) => ({
+      providerId,
+      state: 'ok',
+      rawCount: 10,
+      matchedCount: 10,
+      notes: [],
+    }))
+    // Page 1: 30 unique articles. Page 2: six newer ones that sort above all of them.
+    const first = providers.flatMap(([id, name], p) =>
+      Array.from({ length: 10 }, (_, i) =>
+        story(`${id}-${i}`, id, name, -(i * 3 + p)),
+      ),
+    )
+    const second = Array.from({ length: 6 }, (_, i) =>
+      story(`newer-${i}`, 'guardian', 'The Guardian', 60 + i),
+    )
+
+    let release = () => {}
+    const held = new Promise<void>((resolve) => (release = resolve))
+    await page.route('**/api/feed**', async (route) => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor')
+      if (cursor) await held
+      await route.fulfill({
+        json: {
+          mode: 'demo',
+          articles: cursor ? second : first,
+          providerStatuses: statuses,
+          nextCursor: cursor ? 'cursor-3' : 'cursor-2',
+        },
+      })
+    })
+
+    await openExplore(page)
+    await expect(results(page)).toHaveText('Showing 30 articles')
+    const loadMore = page.getByRole('button', { name: 'Load more' })
+    await loadMore.scrollIntoViewIfNeeded()
+    await loadMore.click()
+    await expect(results(page)).toHaveText(/loading more/)
+
+    if (scrollWhilePending) {
+      // The user keeps reading upward while the request is pending.
+      await page.evaluate(() => window.scrollBy(0, -1000))
+      await expect
+        .poll(() => page.evaluate(() => window.scrollY))
+        .toBeGreaterThan(0)
+    }
+    const anchor = await firstVisibleArticle(page)
+
+    release()
+    await expect(results(page)).toHaveText('Showing 36 articles')
+    expect(
+      Math.abs((await articleTop(page, anchor.id)) - anchor.top),
+    ).toBeLessThanOrEqual(2)
+  })
+}
 
 test('mobile filter Sheet keeps a draft until Apply', async ({
   page,
