@@ -35,13 +35,15 @@ export function ActiveFilters({ filters, onApply }: ActiveFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <h2 className="text-sm text-muted-foreground">Applied:</h2>
-      <ul className="flex flex-wrap gap-2">
+      {/* min-w-0 on each flex level lets a long label truncate instead of widening the page. */}
+      <ul className="flex max-w-full min-w-0 flex-wrap gap-2">
         {chips.map(({ label, remove }) => (
-          <li key={label}>
+          <li key={label} className="max-w-full min-w-0">
             <button
               type="button"
               onClick={() => onApply({ ...filters, ...remove })}
               aria-label={`Remove filter ${label}`}
+              title={label}
               className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-full bg-accent px-3 text-sm text-accent-foreground hover:bg-accent/70 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
               <span className="truncate">{label}</span>

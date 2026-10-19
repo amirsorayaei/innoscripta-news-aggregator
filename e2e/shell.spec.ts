@@ -116,7 +116,7 @@ test('has no horizontal overflow on narrow screens', async ({
   for (const { path } of pages) {
     await page.goto(path)
     const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - window.innerWidth,
+      () => document.documentElement.scrollWidth - 320,
     )
     expect(overflow, path).toBeLessThanOrEqual(0)
   }

@@ -145,7 +145,36 @@ test('Explore results do not overflow at 320px', async ({ page, isMobile }) => {
   await page.setViewportSize({ width: 320, height: 640 })
   await openExplore(page, '/explore?category=technology')
   const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - window.innerWidth,
+    () => document.documentElement.scrollWidth - 320,
   )
   expect(overflow).toBeLessThanOrEqual(0)
+})
+
+test('a long applied search stays within 320px and remains removable', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'Checked on the mobile project.')
+  const longQuery = 'a'.repeat(100)
+  await page.setViewportSize({ width: 320, height: 640 })
+  await page.goto(`/explore?q=${longQuery}&category=health`)
+
+  const chip = page.getByRole('button', {
+    name: `Remove filter “${longQuery}”`,
+  })
+  await expect(chip).toBeVisible()
+  await expect(page.getByText('No articles match these filters.')).toBeVisible()
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - 320,
+  )
+  expect(overflow).toBeLessThanOrEqual(0)
+  const box = await chip.boundingBox()
+  expect(box!.x + box!.width).toBeLessThanOrEqual(320)
+
+  await chip.click()
+  await expect(page).toHaveURL(/\/explore\?category=health$/)
+
+  await page.goto(`/explore?q=${longQuery}&source=guardian`)
+  await page.getByRole('button', { name: 'Clear all' }).click()
+  await expect(page).toHaveURL(/\/explore$/)
 })
