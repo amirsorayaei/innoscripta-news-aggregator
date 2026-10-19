@@ -47,7 +47,7 @@ Demo articles are fictional and use `example.com` links. Their timestamps are fi
 
 ## Provider notes and limitations
 
-- **NewsAPI** has no category filter on `/v2/everything`. Categories are matched through a curated list of publishers, so a NewsAPI article's category describes its publisher, not necessarily the article. The free Developer plan searches about one month back, and older ranges are skipped or clamped with a note. Its terms limit the free plan to development and testing.
+- **NewsAPI** has no category filter on `/v2/everything`. Categories are matched through 16 curated publishers, so a NewsAPI article's category describes its publisher, not necessarily the article. BBC Sport articles come back under the `bbc-news` ID, so a BBC article gets a category only when the request makes it unambiguous; otherwise it stays unset. The free Developer plan searches about one month back, and older ranges are skipped or clamped with a note. Its terms limit the free plan to development and testing.
 - **The Guardian and NYT** filter categories natively, through keyword tags and sections respectively. Multi-word search semantics differ between providers.
 - **Author filtering** applies to the pages fetched so far. It is not an exhaustive archive search.
 - **Free-tier rate limits** apply: NYT allows about 5 requests per minute. The server caches successful pages for 5 minutes and pauses a provider after a 429 instead of retrying.

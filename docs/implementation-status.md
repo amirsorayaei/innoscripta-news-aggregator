@@ -2,13 +2,13 @@
 
 _Last updated: 2026-10-20 (Asia/Tehran)._
 
-| Phase | Branch                     | Status                                                                                                                                                                 |
-| ----- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                                                                            |
-| 2     | `feat/news-providers`      | [Draft PR #2](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/2); local Live verified, NewsAPI mixed-category check inconclusive, hosted Live pending |
-| 3     | `feat/explore-feed`        | Not started                                                                                                                                                            |
-| 4     | `feat/personalized-feed`   | Not started                                                                                                                                                            |
-| 5     | `chore/release-readiness`  | Not started                                                                                                                                                            |
+| Phase | Branch                     | Status                                                                                                                                                                            |
+| ----- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                                                                                       |
+| 2     | `feat/news-providers`      | [PR #2](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/2) ready for review; local Live verified, one non-blocking inconclusive observation, hosted Live pending |
+| 3     | `feat/explore-feed`        | Not started                                                                                                                                                                       |
+| 4     | `feat/personalized-feed`   | Not started                                                                                                                                                                       |
+| 5     | `chore/release-readiness`  | Not started                                                                                                                                                                       |
 
 ## Phase 1 (merged)
 
@@ -27,7 +27,7 @@ Tooling, strict TypeScript, shadcn shell, health API, tests, Docker, CI and Verc
   - NewsAPI: curated publisher categories, key sent in a header, plan date window, result-limit handling.
 - **Feed service:** parallel providers, 5-second timeouts, disconnect-only cancellation, author and UTC post-filters, versioned fingerprinted cursors, and a bounded 5-minute cache of up to 200 pages that never caches errors. Partial success returns 200; total failure and incomplete Live configuration return 503.
 - **Demo:** 35 synthetic articles per provider, all categories, multi-author bylines, canonical duplicates, no network access.
-- **Tooling:** `pnpm smoke:live`, a bounded manual Live check with pass, fail and inconclusive verdicts. The Docker smoke in CI and the E2E suite now request the Demo feed.
+- **Tooling:** `pnpm smoke:live`, a bounded manual Live check with pass, fail and inconclusive verdicts. By default it makes up to 3 requests per provider (page 1, page 2 when page 1 reports more, and keyword with dates). `--categories` adds 8 checks per provider: seven single categories and a mixed business + health check. With `--categories`, NewsAPI also gets one source-catalogue request, for at most 34 requests in total. The Docker smoke in CI and the E2E suite now request the Demo feed.
 
 ### Review fixes (2026-10-20)
 
@@ -40,7 +40,7 @@ Tooling, strict TypeScript, shadcn shell, health API, tests, Docker, CI and Verc
 - `pnpm format:check`, `lint`, `typecheck` and `build` pass.
 - `pnpm test` passes 158 tests in 15 files. Coverage includes filter and date validation, normalization, all three request builders and mappers, auth, rate-limit and invalid-response handling, partial and total failure, timeout, client-disconnect cancellation, cache and secret redaction, Demo determinism and pagination, and incomplete Live config.
 - `pnpm test:e2e` (local Chrome): 20 passed, 2 skipped by design.
-- Docker image (Demo): health, deep links, API 404, Demo feed, cursor follow-up and a 400 for an invalid date all pass.
+- Docker image (Demo): health, deep links, API 404, Demo feed, cursor follow-up, a 400 for an invalid date and a 400 `invalid_cursor` for a tampered cursor all pass.
 
 ## Phase 2: real-provider verification
 
@@ -70,7 +70,7 @@ Tooling, strict TypeScript, shadcn shell, health API, tests, Docker, CI and Verc
   - The keyword with dates check passed.
   - Every curated source was present in the catalogue.
   - All seven categories mapped 10/10, including **sports 10/10**.
-- **Still inconclusive:** mixed business + health. The newest page held 10 business articles and no health. The separate health check passed, so this alone does not show an OR-filtering bug. It stays inconclusive; there are no quotas, reordering or extra pages to force a result.
+- **Documented, non-blocking inconclusive observation:** mixed business + health. The newest page held 10 business articles and no health. The separate health check passed, so this alone does not show an OR-filtering bug. The smoke verdict stays inconclusive; there are no quotas, reordering or extra pages to force a result.
 - **Observations:**
   - The unfiltered pages had 4/10 and 8/10 unlabelled articles. This fits the deliberate rule that leaves BBC articles unlabelled when both BBC sources are requested, but it was not attributed per article.
   - Publisher categories are not article topics. The general sample was a football story from BBC News, and the science sample was a travel story from National Geographic.
@@ -82,7 +82,8 @@ Pending. This needs the merged code and Live provider keys configured on Vercel.
 
 ## Blockers and notes
 
-- Mixed business + health on NewsAPI is unresolved (inconclusive), as described above.
+- NewsAPI mixed business + health stays an inconclusive smoke verdict. It is documented and non-blocking (see above).
+- Hosted (Vercel) Live verification is pending.
 - NewsAPI Developer terms allow development and testing only. A successful hosted request does not change that.
 - The Playwright CDN is unreachable from the development machine, so local E2E uses the installed Chrome. CI uses Playwright's Chromium.
 - Node 22 is not installed locally, so Node 22 is exercised through Docker, CI and Vercel.

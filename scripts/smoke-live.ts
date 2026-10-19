@@ -2,7 +2,7 @@
  * Manual Live smoke test against the real provider APIs.
  *
  *   pnpm smoke:live                 # up to 3 requests per provider
- *   pnpm smoke:live --categories    # + 8 category checks each, + NewsAPI source catalogue
+ *   pnpm smoke:live --categories    # + 7 single + 1 mixed category check each, + NewsAPI catalogue (≤ 34 total)
  *   pnpm smoke:live --provider=nyt  # limit to some providers
  *
  * Exit status: 0 all checks passed, 1 any check failed, 2 some inconclusive.

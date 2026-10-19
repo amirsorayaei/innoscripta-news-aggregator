@@ -19,7 +19,7 @@ AI assistance was used openly throughout this project. This log records what it 
 ## Phase 2: news providers
 
 - **Developer:** approved the phase scope. Chose to keep NewsAPI on the free key with curated publisher categories and explicit `categoryBasis`. Supplies and keeps the provider keys, and reviews and merges the PR.
-- **Claude Code (agent):** implemented the shared contracts, adapters, feed service, Demo data, tests and the smoke command. Checked the provider documentation it could reach (NewsAPI's docs page). The Guardian and NYT doc sites could not be fetched from the agent's tools, so those adapters accept both known NYT response shapes, and the mappings are marked pending real-key verification.
+- **Claude Code (agent):** implemented the shared contracts, adapters, feed service, Demo data, tests and the smoke command. Checked the provider documentation it could reach (NewsAPI's docs page). The Guardian and NYT doc sites could not be fetched from the agent's tools, so those adapters accept both known NYT response shapes, and the mappings were treated as unverified until the real-key run recorded below.
 - **Deviation proposed by the agent and documented:** Guardian categories use OR'd keyword tags instead of sections, because the API ANDs `section` with `tag`, which would make "health OR business" impossible in one request.
 - **Corrections found during verification:**
   - MSW 3 also intercepts Supertest's loopback requests, so the test helper now lets loopback traffic through.

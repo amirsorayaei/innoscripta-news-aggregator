@@ -137,11 +137,11 @@ Local Live verification with free keys on 2026-10-20 (`pnpm smoke:live --categor
 - **NewsAPI:**
   - **Catalogue:** `reuters` and `entertainment-weekly` were missing from the English catalogue and were removed.
   - **Sports:** sports results came back as `bbc-news`, which led to the alias handling above.
-  - **Rerun:** after both fixes, the NewsAPI-only rerun passed every check except mixed business + health, which stays inconclusive (see `docs/implementation-status.md`).
+  - **Rerun:** after both fixes, the NewsAPI-only rerun passed every check except mixed business + health. Its newest page held only business articles while the separate health check passed, so the verdict stays inconclusive. This is a documented, non-blocking observation (see `docs/implementation-status.md`).
 
 Hosted (Vercel) Live behaviour has not been verified.
 
-`pnpm smoke:live` gives each check a verdict:
+`pnpm smoke:live` makes up to 3 requests per provider: page 1, page 2 when page 1 reports more, and keyword with dates. `--categories` adds 8 checks per provider, seven single categories plus mixed business + health. With `--categories`, NewsAPI also gets one source-catalogue request, for at most 34 requests in total. It gives each check a verdict:
 
 - **Fail:** an HTTP error or invalid structure; a non-empty page with no usable articles; an empty unfiltered page 1; or page 2 that is empty, unusable or repeats every page 1 article although page 1 reported more. Partial overlap is allowed for offset drift.
 - **Inconclusive:** empty keyword or category results, or category results that don't map back to the requested categories. Neither certifies a mapping.
