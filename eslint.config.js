@@ -7,7 +7,13 @@ import eslintConfigPrettier from 'eslint-config-prettier/flat'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist',
+    'coverage',
+    '.vercel',
+    'playwright-report',
+    'test-results',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -19,6 +25,15 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+  },
+  {
+    // shadcn primitives export their variant helpers next to the component.
+    files: ['src/client/components/ui/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
+    files: ['src/server/**/*.ts', 'api/**/*.ts', 'e2e/**/*.ts', '*.config.ts'],
+    languageOptions: { globals: globals.node },
   },
   eslintConfigPrettier,
 ])

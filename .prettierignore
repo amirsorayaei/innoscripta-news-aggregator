@@ -4,3 +4,5 @@ coverage/
 .vercel/
 pnpm-lock.yaml
 .env*
+playwright-report/
+test-results/

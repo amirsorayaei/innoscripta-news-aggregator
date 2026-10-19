@@ -29,3 +29,5 @@ dist-ssr
 !.env.example
 .vercel/
 coverage/
+playwright-report/
+test-results/
