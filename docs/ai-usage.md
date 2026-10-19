@@ -25,3 +25,8 @@ AI assistance was used openly throughout this project. This log records what it 
   - MSW 3 also intercepts Supertest's loopback requests, so the test helper now lets loopback traffic through.
   - Zod skips object refinements when field errors exist, which changed one test expectation.
   - A Docker smoke query returned exactly one page, so the CI check now uses a query with more than one page.
+- **Developer review findings, fixed by the agent with regression tests:**
+  - The smoke script reported success for a 200 page with no usable articles.
+  - A tampered cursor could re-enable a provider that the source filter excluded.
+  - A malformed optional NYT image URL threw and dropped neighbouring articles.
+- **Developer decision:** keep Guardian OR'd tag filtering, with the tag mappings and mixed-category behaviour still to be verified with real keys.

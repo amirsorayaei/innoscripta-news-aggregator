@@ -27,12 +27,18 @@ Tooling, strict TypeScript, shadcn shell, health API, tests, Docker, CI and Verc
   - NewsAPI: curated publisher categories, key sent in a header, plan date window, result-limit handling.
 - **Feed service:** parallel providers, 5-second timeouts, disconnect-only cancellation, author and UTC post-filters, versioned fingerprinted cursors, and a bounded 5-minute cache of up to 200 pages that never caches errors. Partial success returns 200; total failure and incomplete Live configuration return 503.
 - **Demo:** 35 synthetic articles per provider, all categories, multi-author bylines, canonical duplicates, no network access.
-- **Tooling:** `pnpm smoke:live`, a bounded manual Live check. The Docker smoke in CI and the E2E suite now request the Demo feed.
+- **Tooling:** `pnpm smoke:live`, a bounded manual Live check with pass, fail and inconclusive verdicts. The Docker smoke in CI and the E2E suite now request the Demo feed.
+
+### Review fixes (2026-10-20)
+
+- **Smoke false positives:** a 200 page with only unusable articles now fails. Pagination must actually advance; a full repeat of page 1 or an empty page 2 fails, while partial overlap is allowed. Empty or unmapped category results are inconclusive, and a mixed business + health check was added. The exit status reflects the verdicts. The check rules live in `scripts/smoke-checks.ts` and are covered by synthetic-response tests.
+- **Cursor eligibility:** a cursor that activates a provider excluded by the source filter or availability rules is rejected with 400 `invalid_cursor` before any adapter is called.
+- **NYT images:** a malformed optional image URL, such as `http://[`, is treated as no image. The article and its neighbours are kept, for both the object and the legacy array `multimedia` shapes.
 
 ## Phase 2: automated verification (local, 2026-10-20)
 
 - `pnpm format:check`, `lint`, `typecheck` and `build` pass.
-- `pnpm test` passes 131 tests in 14 files. Coverage includes filter and date validation, normalization, all three request builders and mappers, auth, rate-limit and invalid-response handling, partial and total failure, timeout, client-disconnect cancellation, cache and secret redaction, Demo determinism and pagination, and incomplete Live config.
+- `pnpm test` passes 152 tests in 15 files. Coverage includes filter and date validation, normalization, all three request builders and mappers, auth, rate-limit and invalid-response handling, partial and total failure, timeout, client-disconnect cancellation, cache and secret redaction, Demo determinism and pagination, and incomplete Live config.
 - `pnpm test:e2e` (local Chrome): 20 passed, 2 skipped by design.
 - Docker image (Demo): health, deep links, API 404, Demo feed, cursor follow-up and a 400 for an invalid date all pass.
 
@@ -41,7 +47,7 @@ Tooling, strict TypeScript, shadcn shell, health API, tests, Docker, CI and Verc
 - **Local:** pending. No provider keys were available in the local `.env`. A harness check with deliberately invalid keys reached all three APIs from the development machine (Guardian 401, NYT 401 `oauth.v2.InvalidApiKey`, NewsAPI 401 `apiKeyInvalid`), and each was mapped to `unauthorized`. One earlier NYT request returned an HTML 403 from Google's front end, but it did not reproduce.
 - **Hosted (Vercel):** pending. This needs the merged code and, for Live checks, provider keys in Vercel. Production stays in Demo mode, and no Vercel environment variables were changed.
 
-To complete it, add the three free keys to `.env` and run `pnpm smoke:live --categories`. This makes at most 10 requests per provider plus one NewsAPI source-catalogue request.
+To complete it, add the three free keys to `.env` and run `pnpm smoke:live --categories`. This makes at most 11 requests per provider plus one NewsAPI source-catalogue request (34 in total). It exits 0 only when every check passes, so inconclusive results still need review before the PR leaves draft.
 
 ## Blockers and notes
 

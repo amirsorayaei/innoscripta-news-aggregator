@@ -58,7 +58,7 @@ Normalization rules:
 ## Pagination and request handling
 
 - Each batch requests at most one page of 10 from each active provider, so there are at most 30 candidates.
-- **Cursor:** base64url JSON `{ v: 1, f, p }`. `f` is a SHA-256 fingerprint of the mode plus the normalized filters. `p` holds each provider's progress: `next` with a page, `exhausted`, `paused` with a code, or `skipped` with a note. Cursors are validated for length, version, allowed providers, page bounds (1–100) and filter match. They are not secret and not authorization.
+- **Cursor:** base64url JSON `{ v: 1, f, p }`. `f` is a SHA-256 fingerprint of the mode plus the normalized filters. `p` holds each provider's progress: `next` with a page, `exhausted`, `paused` with a code, or `skipped` with a note. Cursors are validated for length, version, allowed providers, page bounds (1–100) and filter match. Each provider's progress must also agree with the current filters: a provider that the source filter or availability rules exclude must stay `skipped` with the same note, and an eligible provider cannot be marked `skipped`. Otherwise the request is rejected with 400 `invalid_cursor` before any adapter runs. Cursors are not secret and not authorization; they stay stateless, with no signature or session.
 - **Ordering:** articles in a response are sorted by `publishedAt` desc, then `id`. Only fetched articles are claimed to be newest-first, not the providers' whole archives.
 - **Post-filters:** UTC day bounds and author matching apply to every provider's page after fetching. Author results are therefore "matches within the fetched pages", not a full archive search.
 - **Isolation:** providers run in parallel and independently. Each gets a 5-second timeout combined with the request's abort signal.
@@ -131,6 +131,13 @@ The mappings above follow provider documentation and tested fixtures, but still 
 - Guardian tag coverage, especially `culture/culture`, `uk/uk` and `society/health`.
 - The NYT `section.name` filter field and current document shape.
 - Whether the NewsAPI curated sources exist and still publish.
+- Whether a mixed business + health request returns both categories, which confirms OR rather than AND behaviour.
+
+`pnpm smoke:live` gives each check a verdict:
+
+- **Fail:** an HTTP error or invalid structure; a non-empty page with no usable articles; an empty unfiltered page 1; or page 2 that is empty, unusable or repeats every page 1 article although page 1 reported more. Partial overlap is allowed for offset drift.
+- **Inconclusive:** empty keyword or category results, or category results that don't map back to the requested categories. Neither certifies a mapping.
+- **Pass:** a category check passes only when every requested category appears among the results.
 
 Results are recorded in `docs/implementation-status.md`.
 

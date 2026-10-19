@@ -64,16 +64,16 @@ The multi-stage image builds the client and server with the pinned pnpm, then ru
 
 ## Scripts
 
-| Command                             | Purpose                                                                                                        |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                          | Vite dev server and API in watch mode                                                                          |
-| `pnpm build`                        | Typecheck, then build the client and server into `dist/`                                                       |
-| `pnpm start`                        | Run the production server (client + API on `PORT`)                                                             |
-| `pnpm lint` / `pnpm typecheck`      | ESLint / TypeScript project references                                                                         |
-| `pnpm format` / `pnpm format:check` | Prettier                                                                                                       |
-| `pnpm test`                         | Unit and integration tests (client and server projects)                                                        |
-| `pnpm test:e2e`                     | Playwright against the production Demo build                                                                   |
-| `pnpm smoke:live`                   | Manual Live check of all three providers (needs keys; not in CI); `--categories` also checks category mappings |
+| Command                             | Purpose                                                                                                                                                                                                                                                                                      |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                          | Vite dev server and API in watch mode                                                                                                                                                                                                                                                        |
+| `pnpm build`                        | Typecheck, then build the client and server into `dist/`                                                                                                                                                                                                                                     |
+| `pnpm start`                        | Run the production server (client + API on `PORT`)                                                                                                                                                                                                                                           |
+| `pnpm lint` / `pnpm typecheck`      | ESLint / TypeScript project references                                                                                                                                                                                                                                                       |
+| `pnpm format` / `pnpm format:check` | Prettier                                                                                                                                                                                                                                                                                     |
+| `pnpm test`                         | Unit and integration tests (client and server projects)                                                                                                                                                                                                                                      |
+| `pnpm test:e2e`                     | Playwright against the production Demo build                                                                                                                                                                                                                                                 |
+| `pnpm smoke:live`                   | Manual Live check of all three providers (needs keys; not in CI). Each check passes, fails or is inconclusive; exit code 0 = all passed, 1 = any failed, 2 = some inconclusive. Up to 3 requests per provider; `--categories` adds 8 category checks each plus one NewsAPI catalogue request |
 
 Playwright downloads its own Chromium (`pnpm exec playwright install chromium`). To use an installed Chrome instead, run `PLAYWRIGHT_CHANNEL=chrome pnpm test:e2e`.
 
