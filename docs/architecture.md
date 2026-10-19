@@ -108,7 +108,7 @@ The adapter contract is `fetchPage(filters, page, signal) → { articles, rawCou
 ### NewsAPI (`/v2/everything`)
 
 - **Request:** the key goes in the `X-Api-Key` header, never the URL. Other parameters are `language=en`, `sortBy=publishedAt`, `pageSize=10` and `page`.
-- **Categories:** `/v2/everything` has no category filter. Each category maps to a fixed set of English publishers (18 IDs, under the 20-source limit), and the union is sent as `sources`. With no category, the whole curated set is used, and `q` is omitted when there is no keyword.
+- **Categories:** `/v2/everything` has no category filter. Each category maps to a fixed set of English publishers (16 IDs, under the 20-source limit, all present in the live English catalogue on 2026-10-20), and the union is sent as `sources`. With no category, the whole curated set is used, and `q` is omitted when there is no keyword.
 - **Category meaning:** articles are labelled by their **publisher's** category (`categoryBasis: "publisher"`), and responses note `publisher_categories` when a category filter is active. This is not a statement about each article's topic. Unknown publishers get no category.
 - **Search window:** the Developer plan searches articles up to one month old ([pricing](https://newsapi.org/pricing)). A range that ends before that window is `skipped` (`date_out_of_range`). An older start date is moved forward with the note `date_range_clamped`.
 - **Result limit:** the `maximumResultsReached` error ends paging as `exhausted` with `result_limit_reached`. The adapter does not assume a fixed limit.
@@ -116,13 +116,13 @@ The adapter contract is `fetchPage(filters, page, signal) → { articles, rawCou
 
 | Category      | Sources                              |
 | ------------- | ------------------------------------ |
-| general       | bbc-news, associated-press, reuters  |
+| general       | bbc-news, associated-press           |
 | business      | bloomberg, business-insider, fortune |
 | technology    | techcrunch, the-verge, wired         |
 | science       | new-scientist, national-geographic   |
 | health        | medical-news-today                   |
 | sports        | espn, bbc-sport, talksport           |
-| entertainment | entertainment-weekly, ign, buzzfeed  |
+| entertainment | ign, buzzfeed                        |
 
 ### Verification status
 

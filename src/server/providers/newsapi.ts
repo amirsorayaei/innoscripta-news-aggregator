@@ -21,16 +21,17 @@ const DAY_MS = 24 * 60 * 60 * 1000
 /**
  * /v2/everything has no category filter, so categories map to a small, fixed
  * set of English publishers (at most 20 IDs, the `sources` limit). This is a
- * publisher category, not a guarantee about each article's topic.
+ * publisher category, not a guarantee about each article's topic. Every ID
+ * was present in the live English source catalogue on 2026-10-20.
  */
 export const newsApiCategorySources: Record<Category, string[]> = {
-  general: ['bbc-news', 'associated-press', 'reuters'],
+  general: ['bbc-news', 'associated-press'],
   business: ['bloomberg', 'business-insider', 'fortune'],
   technology: ['techcrunch', 'the-verge', 'wired'],
   science: ['new-scientist', 'national-geographic'],
   health: ['medical-news-today'],
   sports: ['espn', 'bbc-sport', 'talksport'],
-  entertainment: ['entertainment-weekly', 'ign', 'buzzfeed'],
+  entertainment: ['ign', 'buzzfeed'],
 }
 
 const sourceCategories = new Map<string, Category>(

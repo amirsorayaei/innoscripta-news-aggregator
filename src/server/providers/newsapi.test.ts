@@ -16,6 +16,12 @@ const filters = (input: object = {}) => feedFiltersSchema.parse(input)
 const NOW = Date.parse('2026-10-19T12:00:00Z')
 
 describe('NewsAPI publisher categories', () => {
+  it('exclude IDs missing from the live English catalogue', () => {
+    const all = Object.values(newsApiCategorySources).flat()
+    expect(all).not.toContain('reuters')
+    expect(all).not.toContain('entertainment-weekly')
+  })
+
   it('stay within the 20-source limit with at least one source per category', () => {
     const all = Object.values(newsApiCategorySources).flat()
     expect(all.length).toBeLessThanOrEqual(20)
