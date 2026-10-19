@@ -2,7 +2,7 @@
 
 A React + TypeScript news aggregator that combines articles from The Guardian, The New York Times and NewsAPI behind a small Express backend-for-frontend (BFF).
 
-> **Status:** phase 2 of 5. The BFF serves a paginated feed from The Guardian, The New York Times and NewsAPI (`GET /api/feed`), with a deterministic Demo mode. The Explore UI, search and filter controls and the personalized feed arrive in later phases. See [docs/implementation-status.md](docs/implementation-status.md).
+> **Status:** phase 3 of 5. Explore searches and filters a merged, paginated feed from The Guardian, The New York Times and NewsAPI, through a small BFF with a deterministic Demo mode. Preferences and the personalized My Feed arrive in phase 4. See [docs/implementation-status.md](docs/implementation-status.md).
 
 ## Stack
 
@@ -40,6 +40,14 @@ Copy `.env.example` to `.env` to configure Live mode. `pnpm dev`, `pnpm start` a
 `GET /api/health` reports the mode and whether each provider key is configured, without revealing any key.
 
 Demo articles are fictional and use `example.com` links. Their timestamps are five hours apart, counting back from `DEMO_NOW` (default `2026-10-19T09:00:00Z`), so the Demo feed covers roughly the week before that time. Live mode never substitutes Demo data when a provider fails.
+
+## Explore
+
+- **Search:** debounced while typing; Enter applies at once.
+- **Filters:** by source (The Guardian, NYT, NewsAPI), category and an inclusive UTC date range. Filters live in the URL, so reload, sharing and Back/Forward restore them.
+- **Duplicates:** articles from several providers are merged by canonical URL.
+- **Load more:** follows the server's cursor and keeps your reading position.
+- **Provider status:** paused providers, provider limits and publisher-based categories are explained next to the results.
 
 ## Feed API
 

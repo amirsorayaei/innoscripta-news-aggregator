@@ -38,9 +38,25 @@ Typography uses Geist Sans, bundled locally through `@fontsource-variable/geist`
 
 - Routes: `/explore`, `/my-feed` and `/preferences`; `/` redirects to Explore.
 - At 1024px and wider, a narrow sidebar holds the brand, navigation and mode badge.
-- Below 1024px, navigation moves into a left Sheet opened from a sticky top bar. The filter Sheet in a later phase is separate, and the two never open together.
+- Below 1024px, navigation moves into a left Sheet opened from a sticky top bar. Explore's filter Sheet is separate. Both are modal, so the two never open together.
 - Content is capped at 80rem with 16px gutters on small screens.
-- Interactive targets are at least 44px tall. A skip link, visible focus rings, and a reduced-motion rule that disables transitions are included.
+- Interactive targets are at least 44px tall on touch layouts. A skip link, visible focus rings, and a reduced-motion rule that disables transitions and pulses are included.
+
+## Explore
+
+- **Order:** search first, then filters, then the applied-filter chips, then the feed. On desktop (1024px and up), filters sit in an inline card and apply as soon as they are valid. Below that, a **Filters** button with an applied-count badge opens a right-hand Sheet with Reset, Cancel and Apply.
+- **Filter chips** are toggle buttons (`aria-pressed`) grouped in labelled fieldsets: Sources (The Guardian, The New York Times, NewsAPI) and the seven categories. Selected chips use the primary teal with a check icon. Dates are native date inputs with a UTC hint, and an invalid range shows a connected error (`aria-describedby`, `aria-invalid`).
+- **Grid:** one column below 768px, two from 768px and three from 1280px. With the sidebar, the narrowest card is about 290px at 320px and 1280px wide, so no card is squeezed.
+- **Cards:**
+  - **Top:** a 16:9 image with reserved dimensions and lazy loading. A missing or broken image falls back to a quiet teal-tinted panel with a newspaper icon.
+  - **Meta line:** the publisher, then "via …" when the provider differs or several providers returned the article, then a category pill. Publisher-based categories read "Sports · publisher" and explain themselves in a tooltip; unknown categories show no pill.
+  - **Text:** the title (the only link; it opens a new tab and says so to screen readers), a 3-line summary, authors, and a relative time with the exact UTC time as a tooltip. Long text wraps with `overflow-wrap: anywhere` and is clamped.
+- **States:**
+  - **Loading:** a skeleton grid while loading or updating.
+  - **Above the grid:** a "Showing N articles" status line with Refresh; a warning panel for unavailable sources; a muted "About these results" panel for provider notes.
+  - **No results:** a dashed empty state with Clear filters.
+  - **Below the grid:** a footer for Load more, sparse batches, pagination errors, a stream stopped by paused providers, or the end.
+  - **Total failure:** a full-failure panel.
 
 ## References
 

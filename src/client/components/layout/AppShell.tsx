@@ -22,7 +22,10 @@ export function AppShell() {
         <ModeBadge className="mx-3 mt-auto self-start" />
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/95 px-2 backdrop-blur lg:hidden">
+      <header
+        data-sticky-header
+        className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/95 px-2 backdrop-blur lg:hidden"
+      >
         <MobileNav />
         <Brand />
         <ModeBadge className="ml-auto mr-2" />
