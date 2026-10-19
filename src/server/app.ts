@@ -37,7 +37,7 @@ export function createApp(config: ServerConfig, options: AppOptions = {}) {
   return app
 }
 
-function serveClient(app: express.Express, clientDir: string) {
+function serveClient(app: ReturnType<typeof express>, clientDir: string) {
   const indexFile = path.join(clientDir, 'index.html')
 
   app.use(

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build:client",
+  "outputDirectory": "dist/client",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 15,
+      "supportsCancellation": true
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/((?!api/)[^.]*)", "destination": "/index.html" }
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
+}
