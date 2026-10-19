@@ -2,7 +2,7 @@
 
 A React + TypeScript news aggregator that combines articles from The Guardian, The New York Times and NewsAPI behind a small Express backend-for-frontend (BFF).
 
-> **Status:** project foundation (phase 1 of 5). The application shell, routing, health API, Docker image, CI and Vercel wiring are in place. Provider integrations, search, filters and the personalized feed are not implemented yet. See [docs/implementation-status.md](docs/implementation-status.md).
+> **Status:** phase 2 of 5. The BFF serves a paginated feed from The Guardian, The New York Times and NewsAPI (`GET /api/feed`), with a deterministic Demo mode. The Explore UI, search and filter controls and the personalized feed arrive in later phases. See [docs/implementation-status.md](docs/implementation-status.md).
 
 ## Stack
 
@@ -39,6 +39,19 @@ Copy `.env.example` to `.env` to configure Live mode. `pnpm dev`, `pnpm start` a
 
 `GET /api/health` reports the mode and whether each provider key is configured, without revealing any key.
 
+Demo articles are fictional and use `example.com` links. Their timestamps are five hours apart, counting back from `DEMO_NOW` (default `2026-10-19T09:00:00Z`), so the Demo feed covers roughly the week before that time. Live mode never substitutes Demo data when a provider fails.
+
+## Feed API
+
+`GET /api/feed` accepts `q`, `from`, `to` (`YYYY-MM-DD`, UTC days), repeated `source`, `category` and `author` parameters, and an opaque `cursor`. Each response contains up to one page of ten articles per active provider, per-provider statuses (`ok`, `exhausted`, `paused` or `skipped`) and a `nextCursor` for Load more. See [docs/architecture.md](docs/architecture.md) for the contract, pagination rules and provider mappings.
+
+## Provider notes and limitations
+
+- **NewsAPI** has no category filter on `/v2/everything`. Categories are matched through a curated list of publishers, so a NewsAPI article's category describes its publisher, not necessarily the article. The free Developer plan searches about one month back, and older ranges are skipped or clamped with a note. Its terms limit the free plan to development and testing.
+- **The Guardian and NYT** filter categories natively, through keyword tags and sections respectively. Multi-word search semantics differ between providers.
+- **Author filtering** applies to the pages fetched so far. It is not an exhaustive archive search.
+- **Free-tier rate limits** apply: NYT allows about 5 requests per minute. The server caches successful pages for 5 minutes and pauses a provider after a 429 instead of retrying.
+
 ## Docker
 
 ```bash
@@ -51,15 +64,16 @@ The multi-stage image builds the client and server with the pinned pnpm, then ru
 
 ## Scripts
 
-| Command                             | Purpose                                                  |
-| ----------------------------------- | -------------------------------------------------------- |
-| `pnpm dev`                          | Vite dev server and API in watch mode                    |
-| `pnpm build`                        | Typecheck, then build the client and server into `dist/` |
-| `pnpm start`                        | Run the production server (client + API on `PORT`)       |
-| `pnpm lint` / `pnpm typecheck`      | ESLint / TypeScript project references                   |
-| `pnpm format` / `pnpm format:check` | Prettier                                                 |
-| `pnpm test`                         | Unit and integration tests (client and server projects)  |
-| `pnpm test:e2e`                     | Playwright against the production Demo build             |
+| Command                             | Purpose                                                                                                        |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                          | Vite dev server and API in watch mode                                                                          |
+| `pnpm build`                        | Typecheck, then build the client and server into `dist/`                                                       |
+| `pnpm start`                        | Run the production server (client + API on `PORT`)                                                             |
+| `pnpm lint` / `pnpm typecheck`      | ESLint / TypeScript project references                                                                         |
+| `pnpm format` / `pnpm format:check` | Prettier                                                                                                       |
+| `pnpm test`                         | Unit and integration tests (client and server projects)                                                        |
+| `pnpm test:e2e`                     | Playwright against the production Demo build                                                                   |
+| `pnpm smoke:live`                   | Manual Live check of all three providers (needs keys; not in CI); `--categories` also checks category mappings |
 
 Playwright downloads its own Chromium (`pnpm exec playwright install chromium`). To use an installed Chrome instead, run `PLAYWRIGHT_CHANNEL=chrome pnpm test:e2e`.
 
@@ -80,5 +94,6 @@ Production runs on Vercel: the client is served from the CDN, and `api/index.ts`
 ## Documentation
 
 - [DESIGN.md](DESIGN.md): visual direction, tokens and references
+- [docs/architecture.md](docs/architecture.md): contracts, pagination, caching and provider mappings
 - [docs/implementation-status.md](docs/implementation-status.md): current phase and verification log
 - [docs/ai-usage.md](docs/ai-usage.md): how AI assistance was used
