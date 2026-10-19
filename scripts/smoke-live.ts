@@ -1,19 +1,14 @@
 /**
  * Manual Live smoke test against the real provider APIs.
  *
- *   pnpm smoke:live                 # 3 requests per provider
- *   pnpm smoke:live --categories    # + 7 category checks each, + NewsAPI source catalogue
+ *   pnpm smoke:live                 # up to 3 requests per provider
+ *   pnpm smoke:live --categories    # + 8 category checks each, + NewsAPI source catalogue
  *   pnpm smoke:live --provider=nyt  # limit to some providers
  *
- * Reads keys from the environment or .env. Prints counts, states and response
+ * Exit status: 0 all checks passed, 1 any check failed, 2 some inconclusive.
+ * Reads keys from the environment or .env. Prints counts, verdicts and response
  * shapes only; never keys or request URLs. Not part of CI.
  */
-import { categoryIds } from '../src/shared/categories.js'
-import { toUtcDate } from '../src/shared/dates.js'
-import {
-  feedFiltersSchema,
-  type FeedFilters,
-} from '../src/shared/feed-filters.js'
 import { providerIdSchema, type ProviderId } from '../src/shared/providers.js'
 import { loadConfig } from '../src/server/config.js'
 import {
@@ -30,7 +25,14 @@ import {
   newsApiCategorySources,
 } from '../src/server/providers/newsapi.js'
 import { buildNytUrl, mapNytResponse } from '../src/server/providers/nyt.js'
-import type { ProviderPage } from '../src/server/providers/types.js'
+import {
+  evaluateSourceCatalogue,
+  runProviderChecks,
+  tally,
+  type CheckOutcome,
+  type PageLoader,
+  type UpstreamLoad,
+} from './smoke-checks.js'
 
 const args = process.argv.slice(2)
 const withCategories = args.includes('--categories')
@@ -46,40 +48,11 @@ const PACING_MS: Record<ProviderId, number> = {
   newsapi: 1100,
 }
 
-const config = loadConfig()
-const keys = config.apiKeys
+const keys = loadConfig().apiKeys
 const now = Date.now()
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-interface Check {
-  name: string
-  filters: FeedFilters
-  page: number
-}
-
-function checksFor(): Check[] {
-  const f = (input: object) => feedFiltersSchema.parse(input)
-  const recent = { from: toUtcDate(now - 3 * 86_400_000), to: toUtcDate(now) }
-  const checks: Check[] = [
-    { name: 'page 1', filters: f({}), page: 1 },
-    { name: 'page 2', filters: f({}), page: 2 },
-    {
-      name: 'keyword "climate" + last 3 days',
-      filters: f({ q: 'climate', ...recent }),
-      page: 1,
-    },
-  ]
-  if (withCategories) {
-    for (const category of categoryIds) {
-      checks.push({
-        name: `category ${category}`,
-        filters: f({ categories: [category] }),
-        page: 1,
-      })
-    }
-  }
-  return checks
-}
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms))
+const SYMBOLS = { pass: '✓', fail: '✗', inconclusive: '?' } as const
 
 /** Key structure of a value without its contents, to compare schemas. */
 function shape(value: unknown, depth = 0): unknown {
@@ -111,26 +84,40 @@ function redact(text: string) {
   )
 }
 
-async function request(id: ProviderId, check: Check) {
-  const signal = AbortSignal.timeout(10_000)
+function loaderFor(id: ProviderId): PageLoader {
   const key = keys[id]!
-  if (id === 'guardian') {
-    const res = await getUpstreamJson(
-      buildGuardianUrl(check.filters, check.page, key),
-      signal,
-    )
-    return { ...res, map: () => mapGuardianResponse(res.body, check.page) }
+  return async (filters, page) => {
+    const signal = AbortSignal.timeout(10_000)
+    if (id === 'guardian') {
+      const res = await getUpstreamJson(
+        buildGuardianUrl(filters, page, key),
+        signal,
+      )
+      return { ...res, map: () => mapGuardianResponse(res.body, page) }
+    }
+    if (id === 'nyt') {
+      const res = await getUpstreamJson(buildNytUrl(filters, page, key), signal)
+      return { ...res, map: () => mapNytResponse(res.body, page) }
+    }
+    const { url, notes } = buildNewsApiRequest(filters, page, now)
+    const res = await getUpstreamJson(url, signal, { 'X-Api-Key': key })
+    return { ...res, map: () => mapNewsApiResponse(res.body, page, notes) }
   }
-  if (id === 'nyt') {
-    const res = await getUpstreamJson(
-      buildNytUrl(check.filters, check.page, key),
-      signal,
+}
+
+function describeError(id: ProviderId) {
+  return ({ status, body }: UpstreamLoad) => {
+    const upstreamCode =
+      pick(body, 'code') ?? pick(body, 'fault', 'detail', 'errorcode')
+    const message = pick(body, 'message')
+    return (
+      `HTTP ${status} → ${errorCodeForStatus(status)}` +
+      (upstreamCode ? ` (upstream code: ${String(upstreamCode)})` : '') +
+      (id === 'newsapi' && typeof message === 'string'
+        ? `\n    ${redact(message)}`
+        : '')
     )
-    return { ...res, map: () => mapNytResponse(res.body, check.page) }
   }
-  const { url, notes } = buildNewsApiRequest(check.filters, check.page, now)
-  const res = await getUpstreamJson(url, signal, { 'X-Api-Key': key })
-  return { ...res, map: () => mapNewsApiResponse(res.body, check.page, notes) }
 }
 
 function itemsOf(id: ProviderId, body: unknown): unknown[] {
@@ -143,68 +130,27 @@ function itemsOf(id: ProviderId, body: unknown): unknown[] {
   return Array.isArray(items) ? items : []
 }
 
-function summarize(page: ProviderPage) {
-  const count = (pred: (a: ProviderPage['articles'][number]) => boolean) =>
-    page.articles.filter(pred).length
-  const categories: Record<string, number> = {}
-  for (const a of page.articles) {
-    const key = a.category ?? 'none'
-    categories[key] = (categories[key] ?? 0) + 1
-  }
-  return {
-    raw: page.rawCount,
-    valid: page.articles.length,
-    hasMore: page.hasMore,
-    notes: page.notes,
-    withAuthors: count((a) => a.authors.length > 0),
-    withImage: count((a) => Boolean(a.imageUrl)),
-    categories,
-    newest: page.articles[0]?.publishedAt,
-    sampleTitle: page.articles[0]?.title.slice(0, 70),
-    sampleAuthors: page.articles.find((a) => a.authors.length)?.authors,
-  }
-}
-
 async function smokeProvider(id: ProviderId) {
-  const lines: string[] = [`\n=== ${id} ===`]
-  let failures = 0
-  let shownShape = false
-
-  for (const [index, check] of checksFor().entries()) {
-    if (index > 0) await sleep(PACING_MS[id])
-    try {
-      const res = await request(id, check)
-      if (res.status !== 200) {
-        failures++
-        const upstreamCode =
-          pick(res.body, 'code') ??
-          pick(res.body, 'fault', 'detail', 'errorcode')
-        const message = pick(res.body, 'message')
-        lines.push(
-          `✗ ${check.name}: HTTP ${res.status} → ${errorCodeForStatus(res.status)}` +
-            (upstreamCode ? ` (upstream code: ${String(upstreamCode)})` : '') +
-            (id === 'newsapi' && typeof message === 'string'
-              ? `\n    ${redact(message)}`
-              : ''),
-        )
-        continue
+  const load = loaderFor(id)
+  let itemShape: string | undefined
+  const outcomes = await runProviderChecks(
+    async (filters, page) => {
+      const result = await load(filters, page)
+      const first = itemsOf(id, result.body)[0]
+      if (!itemShape && result.status === 200 && first) {
+        itemShape = JSON.stringify(shape(first))
       }
-      if (!shownShape) {
-        lines.push(
-          `  item shape: ${JSON.stringify(shape(itemsOf(id, res.body)[0]))}`,
-        )
-        shownShape = true
-      }
-      lines.push(`✓ ${check.name}: ${JSON.stringify(summarize(res.map()))}`)
-    } catch (error) {
-      failures++
-      const res = error as { code?: string; note?: string }
-      lines.push(
-        `✗ ${check.name}: ${res.code ?? res.note ?? (error as Error).name}`,
-      )
-    }
-  }
-  return { lines, failures }
+      return result
+    },
+    {
+      categories: withCategories,
+      now,
+      pause: () => sleep(PACING_MS[id]),
+      describeError: describeError(id),
+    },
+  )
+  const header = `\n=== ${id} ===${itemShape ? `\n  item shape: ${itemShape}` : ''}`
+  return { header, outcomes }
 }
 
 async function checkNewsApiSources() {
@@ -220,19 +166,12 @@ async function checkNewsApiSources() {
       String(pick(s, 'category')),
     ]),
   )
-  const lines = ['\n=== newsapi curated sources ===']
-  for (const [category, ids] of Object.entries(newsApiCategorySources)) {
-    const status = ids.map((sourceId) =>
-      catalogue.has(sourceId)
-        ? `${sourceId} (${catalogue.get(sourceId)})`
-        : `${sourceId} MISSING`,
-    )
-    lines.push(`  ${category}: ${status.join(', ')}`)
+  return {
+    header: '\n=== newsapi source catalogue ===',
+    outcomes: [
+      evaluateSourceCatalogue(res.status, catalogue, newsApiCategorySources),
+    ],
   }
-  const missing = Object.values(newsApiCategorySources)
-    .flat()
-    .filter((s) => !catalogue.has(s))
-  return { lines, failures: res.status === 200 ? missing.length : 1 }
 }
 
 async function main() {
@@ -247,18 +186,22 @@ async function main() {
     process.exit(1)
   }
 
-  const tasks: Promise<{ lines: string[]; failures: number }>[] =
+  const tasks: Promise<{ header: string; outcomes: CheckOutcome[] }>[] =
     providers.map(smokeProvider)
-  if (withCategories && providers.includes('newsapi'))
+  if (withCategories && providers.includes('newsapi')) {
     tasks.push(checkNewsApiSources())
+  }
   const results = await Promise.all(tasks)
 
-  for (const { lines } of results) console.log(lines.join('\n'))
-  const failures = results.reduce((sum, r) => sum + r.failures, 0)
-  console.log(
-    `\n${failures ? `${failures} check(s) failed` : 'All checks passed'}.`,
-  )
-  process.exit(failures ? 1 : 0)
+  for (const { header, outcomes } of results) {
+    console.log(header)
+    for (const { name, verdict, detail } of outcomes) {
+      console.log(`${SYMBOLS[verdict]} ${name}: ${detail}`)
+    }
+  }
+  const summary = tally(results.flatMap((r) => r.outcomes))
+  console.log(`\n${summary.message}`)
+  process.exit(summary.exitCode)
 }
 
 void main()
