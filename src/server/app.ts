@@ -1,11 +1,16 @@
 import path from 'node:path'
 import express, { type ErrorRequestHandler, type RequestHandler } from 'express'
 import type { ServerConfig } from './config.js'
+import { createFeedHandler } from './feed/feed-route.js'
+import type { FeedService } from './feed/feed-service.js'
+import { createFeedServiceFromConfig } from './feed/from-config.js'
 import { getHealth } from './health.js'
 
 interface AppOptions {
   /** Built client directory; omitted when a CDN or Vite serves the client. */
   clientDir?: string
+  /** Overrides the config-based feed service, e.g. with stub providers in tests. */
+  feedService?: FeedService
 }
 
 const apiNotFound: RequestHandler = (_req, res) => {
@@ -29,6 +34,12 @@ export function createApp(config: ServerConfig, options: AppOptions = {}) {
   app.get('/api/health', (_req, res) => {
     res.set('Cache-Control', 'no-store').json(getHealth(config))
   })
+  app.get(
+    '/api/feed',
+    createFeedHandler(
+      options.feedService ?? createFeedServiceFromConfig(config),
+    ),
+  )
   app.use('/api', apiNotFound)
 
   if (options.clientDir) serveClient(app, options.clientDir)

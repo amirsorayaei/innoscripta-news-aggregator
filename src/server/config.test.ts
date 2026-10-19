@@ -20,4 +20,11 @@ describe('loadConfig', () => {
       loadConfig({ NEWS_MODE: 'auto', GUARDIAN_API_KEY: 'secret-key' }),
     ).toThrowError(/^Invalid server environment: NEWS_MODE$/)
   })
+
+  it('parses DEMO_NOW and rejects invalid timestamps', () => {
+    expect(loadConfig({ DEMO_NOW: '2026-10-19T09:00:00Z' }).demoNow).toBe(
+      Date.parse('2026-10-19T09:00:00Z'),
+    )
+    expect(() => loadConfig({ DEMO_NOW: 'yesterday' })).toThrowError(/DEMO_NOW/)
+  })
 })
