@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw/http'
 import type { HealthResponse } from '@shared/health'
+import { defaultFeed } from './feed'
 
 export const demoHealth: HealthResponse = {
   status: 'ok',
@@ -14,4 +15,5 @@ export const demoHealth: HealthResponse = {
 
 export const handlers = [
   http.get('*/api/health', () => HttpResponse.json(demoHealth)),
+  defaultFeed,
 ]
