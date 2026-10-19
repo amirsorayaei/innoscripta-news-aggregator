@@ -28,6 +28,7 @@ describe('getJson', () => {
       status: 404,
       code: 'not_found',
       message: 'Unknown API route.',
+      body: { error: { code: 'not_found', message: 'Unknown API route.' } },
     })
   })
 

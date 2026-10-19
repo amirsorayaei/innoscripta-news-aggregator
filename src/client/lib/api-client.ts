@@ -3,12 +3,15 @@ import type { z } from 'zod'
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
+  /** Parsed error body, for callers that need structured details. */
+  readonly body: unknown
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, body?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
+    this.body = body
   }
 }
 
@@ -35,6 +38,7 @@ export async function getJson<T>(
       typeof error?.message === 'string'
         ? error.message
         : `Request failed with status ${response.status}.`,
+      body,
     )
   }
 
