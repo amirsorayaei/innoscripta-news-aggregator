@@ -23,4 +23,25 @@ export default defineConfig({
       '/api': `http://localhost:${apiPort}`,
     },
   },
+  test: {
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'client',
+          environment: 'jsdom',
+          include: ['src/client/**/*.test.{ts,tsx}'],
+          setupFiles: ['src/client/test/setup.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'server',
+          environment: 'node',
+          include: ['src/server/**/*.test.ts', 'src/shared/**/*.test.ts'],
+        },
+      },
+    ],
+  },
 })
