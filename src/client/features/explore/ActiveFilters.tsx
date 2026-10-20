@@ -44,7 +44,7 @@ export function ActiveFilters({ filters, onApply }: ActiveFiltersProps) {
               onClick={() => onApply({ ...filters, ...remove })}
               aria-label={`Remove filter ${label}`}
               title={label}
-              className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-full bg-accent px-3 text-sm text-accent-foreground hover:bg-accent/70 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="inline-flex min-h-11 max-w-full items-center gap-1 rounded-full bg-accent lg:min-h-9 px-3 text-sm text-accent-foreground hover:bg-accent/70 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
               <span className="truncate">{label}</span>
               <X aria-hidden="true" className="size-3.5 shrink-0" />
@@ -54,7 +54,7 @@ export function ActiveFilters({ filters, onApply }: ActiveFiltersProps) {
       </ul>
       <Button
         variant="link"
-        className="min-h-9 px-1"
+        className="min-h-11 px-1 lg:min-h-9"
         onClick={() => onApply(EMPTY_FILTERS)}
       >
         Clear all

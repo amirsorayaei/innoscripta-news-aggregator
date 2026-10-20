@@ -180,3 +180,18 @@ test('blocked storage keeps saved preferences for the session and says so', asyn
   ).toBeVisible()
   await expect(feedStatus(page)).toBeVisible()
 })
+
+test('author remove buttons are about 44px on touch screens', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'Touch target sizes are checked on the mobile project.')
+  await page.goto('/preferences')
+  await page.getByRole('textbox', { name: 'Author name' }).fill('Jane Doe')
+  await page.getByRole('textbox', { name: 'Author name' }).press('Enter')
+  const box = await page
+    .getByRole('button', { name: 'Remove Jane Doe' })
+    .boundingBox()
+  expect(box!.height).toBeGreaterThanOrEqual(44)
+  expect(box!.width).toBeGreaterThanOrEqual(44)
+})

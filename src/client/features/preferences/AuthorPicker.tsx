@@ -58,7 +58,7 @@ export function AuthorPicker({ selected, onChange }: AuthorPickerProps) {
                   type="button"
                   onClick={() => onChange(selected.filter((n) => n !== name))}
                   aria-label={`Remove ${name}`}
-                  className="grid size-9 shrink-0 place-items-center rounded-full hover:bg-accent-foreground/10 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-accent-foreground/10 lg:size-9 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   <X aria-hidden="true" className="size-4" />
                 </button>

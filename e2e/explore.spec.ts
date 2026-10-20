@@ -323,3 +323,20 @@ test('cards show loaded images and fall back for missing or broken ones', async 
   await expect(card('broken').locator('svg.lucide-newspaper')).toBeVisible()
   await expect(card('missing').locator('svg.lucide-newspaper')).toBeVisible()
 })
+
+test('touch controls for search and applied filters are about 44px', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'Touch target sizes are checked on the mobile project.')
+  await openExplore(page, '/explore?q=flood&category=health')
+  for (const name of [
+    'Clear search',
+    'Remove filter “flood”',
+    'Remove filter Health',
+    'Clear all',
+  ]) {
+    const box = await page.getByRole('button', { name }).boundingBox()
+    expect(box!.height, name).toBeGreaterThanOrEqual(44)
+  }
+})
