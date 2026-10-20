@@ -45,7 +45,7 @@ export function SearchBar({ applied, onCommit }: SearchBarProps) {
             submit('')
           }}
           aria-label="Clear search"
-          className="absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          className="absolute top-1/2 right-0 grid size-11 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           <X aria-hidden="true" className="size-4" />
         </button>

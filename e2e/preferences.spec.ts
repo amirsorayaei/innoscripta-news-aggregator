@@ -150,3 +150,48 @@ test('My Feed asks for preferences before showing any articles', async ({
   await expectNoSeriousViolations(page)
   expect(feedRequests).toBe(0)
 })
+
+test('blocked storage keeps saved preferences for the session and says so', async ({
+  page,
+  isMobile,
+}) => {
+  await page.addInitScript(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException('Storage blocked', 'QuotaExceededError')
+    }
+  })
+  await page.goto('/preferences')
+  await page.getByRole('button', { name: 'The Guardian' }).click()
+  await page.getByRole('button', { name: 'Save' }).click()
+
+  await expect(
+    page.getByRole('status').filter({
+      hasText:
+        'Preferences applied to My Feed. Changes are not persisted on this device.',
+    }),
+  ).toBeVisible()
+  await expect(page.getByText('Preferences saved.')).toHaveCount(0)
+  // The pointer still rests on Save, so its hover colour is checked too.
+  await expectNoSeriousViolations(page)
+
+  await goTo(page, isMobile, 'My Feed')
+  await expect(
+    page.getByText('The Guardian', { exact: true }).first(),
+  ).toBeVisible()
+  await expect(feedStatus(page)).toBeVisible()
+})
+
+test('author remove buttons are about 44px on touch screens', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'Touch target sizes are checked on the mobile project.')
+  await page.goto('/preferences')
+  await page.getByRole('textbox', { name: 'Author name' }).fill('Jane Doe')
+  await page.getByRole('textbox', { name: 'Author name' }).press('Enter')
+  const box = await page
+    .getByRole('button', { name: 'Remove Jane Doe' })
+    .boundingBox()
+  expect(box!.height).toBeGreaterThanOrEqual(44)
+  expect(box!.width).toBeGreaterThanOrEqual(44)
+})

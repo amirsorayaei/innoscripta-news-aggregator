@@ -58,7 +58,7 @@ export function AuthorPicker({ selected, onChange }: AuthorPickerProps) {
                   type="button"
                   onClick={() => onChange(selected.filter((n) => n !== name))}
                   aria-label={`Remove ${name}`}
-                  className="grid size-9 shrink-0 place-items-center rounded-full hover:bg-accent-foreground/10 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="grid size-11 shrink-0 place-items-center rounded-full hover:bg-accent-foreground/10 lg:size-9 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   <X aria-hidden="true" className="size-4" />
                 </button>
@@ -119,9 +119,9 @@ export function AuthorPicker({ selected, onChange }: AuthorPickerProps) {
         aria-labelledby={`${id}-suggestions`}
         className="space-y-2"
       >
-        <h3 id={`${id}-suggestions`} className="text-sm font-medium">
+        <p id={`${id}-suggestions`} className="text-sm font-medium">
           Suggested from loaded articles
-        </h3>
+        </p>
         {visible.length > 0 ? (
           <ul className="flex flex-wrap gap-2">
             {visible.map(({ name }) => (

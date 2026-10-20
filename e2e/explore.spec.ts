@@ -269,3 +269,74 @@ test('a long applied search stays within 320px and remains removable', async ({
   await page.getByRole('button', { name: 'Clear all' }).click()
   await expect(page).toHaveURL(/\/explore$/)
 })
+
+test('cards show loaded images and fall back for missing or broken ones', async ({
+  page,
+}) => {
+  const pixel = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  )
+  await page.route('https://img.test/ok.png', (route) =>
+    route.fulfill({ body: pixel, contentType: 'image/png' }),
+  )
+  await page.route('https://img.test/broken.png', (route) =>
+    route.fulfill({ status: 404, body: '' }),
+  )
+  const story = (id: string, imageUrl?: string) => ({
+    id,
+    canonicalUrl: `https://news.test/${id}`,
+    url: `https://news.test/${id}`,
+    title: `Story ${id}`,
+    publishedAt: '2026-10-19T08:00:00.000Z',
+    authors: [],
+    providerId: 'guardian',
+    publisherName: 'The Guardian',
+    categoryBasis: 'unknown',
+    ...(imageUrl && { imageUrl }),
+  })
+  await page.route('**/api/feed**', (route) =>
+    route.fulfill({
+      json: {
+        mode: 'demo',
+        articles: [
+          story('loaded', 'https://img.test/ok.png'),
+          story('broken', 'https://img.test/broken.png'),
+          story('missing'),
+        ],
+        providerStatuses: [],
+        nextCursor: null,
+      },
+    }),
+  )
+
+  await openExplore(page)
+  const card = (id: string) => page.locator(`[data-article-id="${id}"]`)
+  await expect(card('loaded').locator('img')).toHaveJSProperty('complete', true)
+  expect(
+    await card('loaded')
+      .locator('img')
+      .evaluate((img: HTMLImageElement) => img.naturalWidth),
+  ).toBeGreaterThan(0)
+  await expect(card('broken').locator('img')).toHaveCount(0)
+  await expect(card('missing').locator('img')).toHaveCount(0)
+  await expect(card('broken').locator('svg.lucide-newspaper')).toBeVisible()
+  await expect(card('missing').locator('svg.lucide-newspaper')).toBeVisible()
+})
+
+test('touch controls for search and applied filters are about 44px', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, 'Touch target sizes are checked on the mobile project.')
+  await openExplore(page, '/explore?q=flood&category=health')
+  for (const name of [
+    'Clear search',
+    'Remove filter “flood”',
+    'Remove filter Health',
+    'Clear all',
+  ]) {
+    const box = await page.getByRole('button', { name }).boundingBox()
+    expect(box!.height, name).toBeGreaterThanOrEqual(44)
+  }
+})

@@ -6,3 +6,4 @@ pnpm-lock.yaml
 .env*
 playwright-report/
 test-results/
+.pnpm-store/
