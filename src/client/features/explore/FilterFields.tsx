@@ -1,6 +1,6 @@
-import { Check } from 'lucide-react'
 import { categoryIds, categoryLabels } from '@shared/categories'
 import { providerIds, providerNames } from '@shared/providers'
+import { ToggleChip } from '@/components/ToggleChip'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { toggle, type FilterDraft } from './filter-draft'
@@ -38,7 +38,7 @@ export function FilterFields({
         <legend className="mb-2 text-sm font-medium">Sources</legend>
         <div className="flex flex-wrap gap-2">
           {providerIds.map((id) => (
-            <Chip
+            <ToggleChip
               key={id}
               className={control}
               pressed={value.sources.includes(id)}
@@ -47,7 +47,7 @@ export function FilterFields({
               }
             >
               {providerNames[id]}
-            </Chip>
+            </ToggleChip>
           ))}
         </div>
       </fieldset>
@@ -56,7 +56,7 @@ export function FilterFields({
         <legend className="mb-2 text-sm font-medium">Categories</legend>
         <div className="flex flex-wrap gap-2">
           {categoryIds.map((id) => (
-            <Chip
+            <ToggleChip
               key={id}
               className={control}
               pressed={value.categories.includes(id)}
@@ -65,7 +65,7 @@ export function FilterFields({
               }
             >
               {categoryLabels[id]}
-            </Chip>
+            </ToggleChip>
           ))}
         </div>
       </fieldset>
@@ -103,29 +103,5 @@ export function FilterFields({
         </p>
       </fieldset>
     </div>
-  )
-}
-
-interface ChipProps {
-  pressed: boolean
-  onClick: () => void
-  className?: string
-  children: React.ReactNode
-}
-
-function Chip({ pressed, onClick, className, children }: ChipProps) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border bg-background px-3 text-sm transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground',
-        className,
-      )}
-    >
-      {pressed && <Check aria-hidden="true" className="size-3.5" />}
-      {children}
-    </button>
   )
 }
