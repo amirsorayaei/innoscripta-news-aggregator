@@ -23,16 +23,17 @@ Typography uses Geist Sans, bundled locally through `@fontsource-variable/geist`
 
 ### Measured contrast (WCAG 2.x)
 
-| Pair                                | Ratio         |
-| ----------------------------------- | ------------- |
-| foreground on background            | 15.8:1        |
-| muted-foreground on background      | 5.8:1         |
-| muted-foreground on muted / sidebar | 5.3:1 / 5.4:1 |
-| primary-foreground on primary       | 6.8:1         |
-| accent-foreground on accent         | 8.8:1         |
-| warning-foreground on warning       | 7.5:1         |
-| destructive on background           | 5.8:1         |
-| ring on background (non-text)       | 4.5:1         |
+| Pair                                        | Ratio         |
+| ------------------------------------------- | ------------- |
+| foreground on background                    | 15.8:1        |
+| muted-foreground on background              | 5.8:1         |
+| muted-foreground on muted / sidebar         | 5.3:1 / 5.4:1 |
+| primary-foreground on primary               | 6.8:1         |
+| primary-foreground on primary hover (`/90`) | 5.4:1         |
+| accent-foreground on accent                 | 8.8:1         |
+| warning-foreground on warning               | 7.5:1         |
+| destructive on background                   | 5.8:1         |
+| ring on background (non-text)               | 4.5:1         |
 
 ## Layout
 
@@ -40,7 +41,8 @@ Typography uses Geist Sans, bundled locally through `@fontsource-variable/geist`
 - At 1024px and wider, a narrow sidebar holds the brand, navigation and mode badge.
 - Below 1024px, navigation moves into a left Sheet opened from a sticky top bar. Explore's filter Sheet is separate. Both are modal, so the two never open together.
 - Content is capped at 80rem with 16px gutters on small screens.
-- Interactive targets are at least 44px tall on touch layouts. A skip link, visible focus rings, and a reduced-motion rule that disables transitions and pulses are included.
+- Interactive targets are at least 44px on touch layouts (below 1024px), including chip removal, search clearing and author removal. Desktop uses compact 36px versions of a few secondary controls. A skip link, visible focus rings, and a reduced-motion rule that disables transitions and pulses are included.
+- The primary button's hover state darkens only to 90% opacity, so its white text keeps AA contrast (shadcn's default 80% fell to 4.4:1).
 
 ## Explore
 
