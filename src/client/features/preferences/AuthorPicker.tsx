@@ -119,9 +119,9 @@ export function AuthorPicker({ selected, onChange }: AuthorPickerProps) {
         aria-labelledby={`${id}-suggestions`}
         className="space-y-2"
       >
-        <h3 id={`${id}-suggestions`} className="text-sm font-medium">
+        <p id={`${id}-suggestions`} className="text-sm font-medium">
           Suggested from loaded articles
-        </h3>
+        </p>
         {visible.length > 0 ? (
           <ul className="flex flex-wrap gap-2">
             {visible.map(({ name }) => (
