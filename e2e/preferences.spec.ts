@@ -150,3 +150,33 @@ test('My Feed asks for preferences before showing any articles', async ({
   await expectNoSeriousViolations(page)
   expect(feedRequests).toBe(0)
 })
+
+test('blocked storage keeps saved preferences for the session and says so', async ({
+  page,
+  isMobile,
+}) => {
+  await page.addInitScript(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException('Storage blocked', 'QuotaExceededError')
+    }
+  })
+  await page.goto('/preferences')
+  await page.getByRole('button', { name: 'The Guardian' }).click()
+  await page.getByRole('button', { name: 'Save' }).click()
+
+  await expect(
+    page.getByRole('status').filter({
+      hasText:
+        'Preferences applied to My Feed. Changes are not persisted on this device.',
+    }),
+  ).toBeVisible()
+  await expect(page.getByText('Preferences saved.')).toHaveCount(0)
+  // The pointer still rests on Save, so its hover colour is checked too.
+  await expectNoSeriousViolations(page)
+
+  await goTo(page, isMobile, 'My Feed')
+  await expect(
+    page.getByText('The Guardian', { exact: true }).first(),
+  ).toBeVisible()
+  await expect(feedStatus(page)).toBeVisible()
+})
