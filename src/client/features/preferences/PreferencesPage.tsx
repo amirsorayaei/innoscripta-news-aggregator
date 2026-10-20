@@ -109,36 +109,41 @@ export function PreferencesPage() {
         </section>
 
         <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
-          <p role="status" className="mr-auto min-w-0 text-sm">
+          <p
+            role="status"
+            className="w-full min-w-0 text-sm sm:mr-auto sm:w-auto"
+          >
             <SaveStatus dirty={dirty} feedback={feedback} />
           </p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="min-h-11"
-            onClick={reset}
-          >
-            Reset
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="min-h-11"
-            onClick={cancel}
-            disabled={!dirty}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            size="lg"
-            className="min-h-11"
-            disabled={!canSave}
-          >
-            Save
-          </Button>
+          <div className="ml-auto flex gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="min-h-11"
+              onClick={reset}
+            >
+              Reset
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="min-h-11"
+              onClick={cancel}
+              disabled={!dirty}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="lg"
+              className="min-h-11"
+              disabled={!canSave}
+            >
+              Save
+            </Button>
+          </div>
         </div>
       </form>
     </>
