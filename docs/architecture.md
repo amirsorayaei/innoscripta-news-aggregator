@@ -9,7 +9,7 @@ One package with three source roots:
 | `src/client` | React app. It talks only to the BFF.                                                       |
 | `api/`       | Vercel function entry that exports the same Express app.                                   |
 
-Data flow: URL or saved preferences → normalized filters → TanStack Query → `GET /api/feed` → three adapters in parallel → shared response → client merge and sort → UI. Explore (phase 3) reads filters from the URL; My Feed (phase 4) will read them from saved preferences.
+Data flow: URL or saved preferences → normalized filters → TanStack Query → `GET /api/feed` → three adapters in parallel → shared response → client merge and sort → UI. Explore reads filters from the URL; My Feed builds them from saved preferences.
 
 ## Client feed
 
