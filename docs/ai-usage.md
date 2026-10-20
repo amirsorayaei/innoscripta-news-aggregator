@@ -45,3 +45,17 @@ AI assistance was used openly throughout this project. This log records what it 
   - `invalid_cursor` offered a retry of the rejected cursor.
 
   While reproducing the first finding, the agent found that its earlier 320px checks compared `scrollWidth` with `innerWidth`, which mobile emulation widens. The checks now compare against the fixed 320px width.
+
+## Phase 4: Preferences and My Feed
+
+- **Developer:** defined the scope and acceptance criteria (explicit Save/Cancel/Reset, validated versioned storage, honest persistence feedback, cache-only author suggestions and no generic request for empty preferences), and reviews and merges the PR.
+- **Claude Code (agent):**
+  - ran the bounded hosted Phase 3 preflight;
+  - implemented the preferences provider, storage, draft form, author picker and My Feed;
+  - wrote the unit, integration and Playwright tests;
+  - reviewed layouts through screenshots at several widths;
+  - updated the docs.
+- **Corrections found during verification:**
+  - A test expected case-only author differences to count as unchanged. The implementation compares display forms, so the test was corrected.
+  - Synchronous tests that ended before `/api/health` settled produced MSW abort noise; they now wait for the mode badge.
+  - On small screens Save wrapped onto its own line, so the action buttons are now grouped.

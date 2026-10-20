@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
+import { AppProviders } from './AppProviders'
 import { createQueryClient } from './query-client'
 import { routes } from './routes'
 
@@ -11,8 +11,8 @@ export function App() {
   const [queryClient] = useState(createQueryClient)
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <AppProviders queryClient={queryClient}>
       <RouterProvider router={router} />
-    </QueryClientProvider>
+    </AppProviders>
   )
 }

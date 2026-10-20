@@ -14,6 +14,7 @@ afterEach(() => {
   server.resetHandlers()
   feedRequests.length = 0
   setDesktop(true)
+  localStorage.clear()
   vi.mocked(window.scrollBy).mockClear()
 })
 afterAll(() => server.close())

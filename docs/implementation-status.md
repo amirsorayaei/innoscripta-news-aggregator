@@ -6,8 +6,8 @@ _Last updated: 2026-10-20 (Asia/Tehran)._
 | ----- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | 1     | `chore/project-foundation` | Merged (PR #1, merge commit `94751f0`); production verified                                                       |
 | 2     | `feat/news-providers`      | Merged (PR #2, merge commit `a78b110`); local and hosted Live verified, one non-blocking inconclusive observation |
-| 3     | `feat/explore-feed`        | PR open, awaiting review                                                                                          |
-| 4     | `feat/personalized-feed`   | Not started                                                                                                       |
+| 3     | `feat/explore-feed`        | Merged (PR #4, merge commit `a43dee2`); hosted preflight passed                                                   |
+| 4     | `feat/personalized-feed`   | PR open, awaiting review                                                                                          |
 | 5     | `chore/release-readiness`  | Not started                                                                                                       |
 
 ## Phase 1 (merged)
@@ -156,6 +156,46 @@ Each fix has a regression test that failed on review baseline `791538c` and pass
 - Explore ignores `author` URL parameters, because author filtering belongs to My Feed (phase 4).
 - Relative times use the time the grid mounted and do not tick while the page stays open.
 
-## Next (phase 4, after approval)
+## Phase 4: Preferences and My Feed
 
-Preferences with an explicit Save/Cancel, author selection and manual entry, validated local persistence, and My Feed built on the reusable article feed.
+### Hosted Phase 3 preflight (2026-10-20)
+
+Production `dpl_2MRCs53MSgji1Pg7FJuMnxEHnEby` was deployed by the deploy job of main CI run 39338393168 from merge `a43dee2`, and every job passed. `/api/health` reports Live, ready and all providers configured. Explore showed the Live badge and 30 real articles (theguardian.com, nytimes.com, bbc.co.uk, fortune.com). Selecting The Guardian produced `?source=guardian` and 10 Guardian articles. The check used one health request and two feed requests.
+
+### Implemented
+
+- **Preferences:** applied preferences live in a provider shared by all routes. A validated, versioned `localStorage` payload is hydrated without rewriting, and every storage access is guarded. Persistence is reported honestly, and preferences keep working in memory after a write failure.
+- **Preferences page:** sources, categories and authors in a local draft. Save, Cancel and Reset come with dirty, saved and not-persisted feedback in a sticky action bar.
+- **Authors:** manual entry with connected duplicate, empty, over-long and limit errors; suggestions from cached pages of the current mode only; removable pills that wrap long names.
+- **My Feed:** a setup state with no request when every group is empty, and otherwise the shared `ArticleFeed` with filters from the saved groups only. It also shows a summary of the saved groups, an author-matching note and personalized empty wording.
+- **Shared:** `ToggleChip` now serves both Explore and Preferences, and `ArticleFeed` accepts empty-state wording.
+
+### Verification (local, 2026-10-20)
+
+- `pnpm format:check`, `lint`, `typecheck` and `build` pass.
+- `pnpm test` passes 252 tests in 27 files. New coverage:
+  - **Storage:** valid, malformed JSON, invalid fields, unsupported or missing versions, and limit violations; inaccessible `localStorage`, and throwing `getItem`/`setItem`.
+  - **Drafts:** draft isolation across navigation; Save, Cancel, Reset-then-Cancel and Reset-then-Save.
+  - **Persistence:** hydration without a write; write failure with in-memory continuity and honest messages, then a successful retry; read failure at start.
+  - **Authors:** accents and commas kept; duplicate, empty, over-long and 20-limit errors connected to the field; mode-separated cache suggestions that update with the cache and fetch nothing; a saved author absent from suggestions staying selected.
+  - **My Feed requests:** no request when empty; exact requests for source-only, category-only, author-only and combined preferences, with no Explore keyword or dates.
+  - **My Feed streams:** a sparse author batch with no auto-fetch; changed preferences starting a new stream without stale results.
+- `pnpm test:e2e` (local Chrome, production Demo build): 44 passed, 8 skipped by design. New:
+  - Preferences → Save → My Feed (exact request) → reload;
+  - Cancel and Reset;
+  - keyboard author add and remove;
+  - all categories plus an 80-character author at a fixed 320px on both pages;
+  - axe on Preferences and My Feed;
+  - no feed request before preferences exist.
+- **Layouts:** no horizontal overflow on Preferences at 320, 390, 768 and 1440px, or on My Feed at 320, 390 and 1440px, each measured against the fixed viewport width.
+- **Docker image (Demo):** health check `healthy`; feed and cursor follow-up; invalid date → 400; an author-filtered feed; `/preferences` and `/my-feed` deep links served.
+
+### Limitations
+
+- **Drafts:** an unsaved draft is discarded when leaving Preferences; there is no unsaved-changes prompt.
+- **Suggestions:** they come only from articles loaded in the current session, so a full page reload clears them until articles load again. Typing a name always works.
+- **Other tabs:** there is no cross-tab synchronization.
+
+## Next (phase 5, after approval)
+
+Responsive and accessibility polish, final documentation, clean-clone and Docker verification, final live smoke and delivery readiness.
