@@ -16,10 +16,13 @@ interface ArticleFeedProps {
   filters: FeedFilters
   /** Shown with the empty state, e.g. a way to clear filters. */
   emptyAction?: ReactNode
+  /** Wording for the empty state; defaults suit ad-hoc searches. */
+  emptyTitle?: string
+  emptyHint?: string
 }
 
 /** Paginated, merged article feed for a set of applied filters. */
-export function ArticleFeed({ filters, emptyAction }: ArticleFeedProps) {
+export function ArticleFeed(props: ArticleFeedProps) {
   const feedMode = useFeedMode()
 
   if (feedMode.state === 'loading') {
@@ -42,20 +45,20 @@ export function ArticleFeed({ filters, emptyAction }: ArticleFeedProps) {
       />
     )
   }
-  return (
-    <FeedResults
-      filters={filters}
-      mode={feedMode.mode}
-      emptyAction={emptyAction}
-    />
-  )
+  return <FeedResults {...props} mode={feedMode.mode} />
 }
 
 interface FeedResultsProps extends ArticleFeedProps {
   mode: NewsMode
 }
 
-function FeedResults({ filters, mode, emptyAction }: FeedResultsProps) {
+function FeedResults({
+  filters,
+  mode,
+  emptyAction,
+  emptyTitle = 'No articles match these filters.',
+  emptyHint = 'Try a broader search, other categories or a wider date range.',
+}: FeedResultsProps) {
   const { query, articles, summary, loadMore, refresh } = useFeed(filters, mode)
   const key = feedQueryKey(mode, filters).join('|')
   const [firstKey] = useState(key)
@@ -111,10 +114,8 @@ function FeedResults({ filters, mode, emptyAction }: FeedResultsProps) {
 
       {count === 0 && !summary.hasMore ? (
         <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed bg-card p-6">
-          <h3 className="font-semibold">No articles match these filters.</h3>
-          <p className="text-sm text-muted-foreground">
-            Try a broader search, other categories or a wider date range.
-          </p>
+          <h3 className="font-semibold">{emptyTitle}</h3>
+          <p className="text-sm text-muted-foreground">{emptyHint}</p>
           {emptyAction}
         </div>
       ) : (
