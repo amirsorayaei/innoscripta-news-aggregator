@@ -2,7 +2,7 @@
 
 A React + TypeScript news aggregator that combines articles from The Guardian, The New York Times and NewsAPI behind a small Express backend-for-frontend (BFF).
 
-> **Status:** phase 3 of 5. Explore searches and filters a merged, paginated feed from The Guardian, The New York Times and NewsAPI, through a small BFF with a deterministic Demo mode. Preferences and the personalized My Feed arrive in phase 4. See [docs/implementation-status.md](docs/implementation-status.md).
+> **Status:** phase 4 of 5. Explore searches and filters a merged, paginated feed from The Guardian, The New York Times and NewsAPI, and My Feed shows articles matching saved preferences. A small BFF serves both, with a deterministic Demo mode. See [docs/implementation-status.md](docs/implementation-status.md).
 
 ## Stack
 
@@ -48,6 +48,13 @@ Demo articles are fictional and use `example.com` links. Their timestamps are fi
 - **Duplicates:** articles from several providers are merged by canonical URL.
 - **Load more:** follows the server's cursor and keeps your reading position.
 - **Provider status:** paused providers, provider limits and publisher-based categories are explained next to the results.
+
+## Preferences and My Feed
+
+- **Preferences:** choose sources, categories and authors (full names, typed or suggested from articles already loaded in this session). Edits stay in a draft until **Save**; **Cancel** restores the saved preferences and **Reset** only clears the draft.
+- **Storage:** saved preferences are kept in `localStorage` under `news-desk.preferences` as a validated, versioned payload. If the browser blocks storage, they still apply for the session and the page says _"Changes are not persisted on this device."_
+- **My Feed:** uses only the saved preferences: OR within a group, AND between groups, and an empty group means "any". With nothing saved, it asks you to set preferences and sends no feed request.
+- **Author filtering:** matches normalized full names within the pages each source returns. It is not an archive-wide author search, so a batch can contain no matches while more pages follow.
 
 ## Feed API
 

@@ -58,6 +58,17 @@ Typography uses Geist Sans, bundled locally through `@fontsource-variable/geist`
   - **Below the grid:** a footer for Load more, sparse batches, pagination errors, a stream stopped by paused providers, or the end.
   - **Total failure:** a full-failure panel.
 
+## Preferences and My Feed
+
+- **Preferences:**
+  - **Layout:** three cards (Sources, Categories, Authors) with fieldset legends and one-line explanations. Sources and categories reuse the Explore toggle chips at 44px.
+  - **Authors:** selected names are teal-tinted pills that wrap instead of truncating, each with a 36px remove button labelled "Remove _name_". Below them are a labelled name field with an Add button, a connected error line, and suggestion buttons ("Add _name_") from loaded articles.
+  - **Action bar:** sticky at the bottom with a status line (unsaved changes, saved, or not persisted) and Reset, Cancel and Save. Below `sm`, the status takes its own row so the three buttons stay together.
+  - **Storage warning:** a warning panel appears when storage is unavailable.
+- **My Feed:**
+  - **No preferences:** a dashed setup card linking to Preferences.
+  - **Otherwise:** a summary card of the saved groups (wrapping long names), an author-matching note when authors are set, and Edit preferences, followed by the shared article feed with personalized empty-state wording.
+
 ## References
 
 These references guide hierarchy and density only. No layout or branding is copied.

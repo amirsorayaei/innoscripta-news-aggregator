@@ -39,6 +39,21 @@ Data flow: URL or saved preferences → normalized filters → TanStack Query �
   - **Desktop:** filters apply when valid; an invalid date range shows an error and sends nothing.
   - **Mobile:** the Sheet edits a copy of the applied filters. Apply commits it, while Cancel, Escape or dismissal discard it, and Reset clears only the copy.
 
+## Preferences and My Feed
+
+- **Applied preferences** (`features/preferences`):
+  - `PreferencesProvider` sits above the router, so every route sees the same applied sources, categories and authors. It reads storage once on start and never writes during hydration or editing.
+  - `save()` normalizes with the shared filter schema, applies, then attempts to write. It returns whether the write succeeded, and `persisted` records the result.
+- **Storage:**
+  - **Payload:** one key, `news-desk.preferences`, holding `{ schemaVersion: 1, preferences }`.
+  - **Validation:** the payload must match its Zod envelope, and the values are validated and normalized with `feedFiltersSchema`, giving the same IDs, author cleaning, deduplication and limits (20 authors, 80 characters) as the API. Malformed JSON, invalid values or another version yield empty preferences.
+  - **Failures:** access to `localStorage`, `getItem` and `setItem` are each guarded. A read failure starts empty and not persisted. A write failure keeps the new preferences in memory, and the UI says _"Changes are not persisted on this device."_ A later successful Save clears that status.
+- **Draft:** the Preferences page keeps a local draft (`usePreferencesDraft`). Edits never reach the provider until Save. Cancel restores the applied preferences, and Reset empties only the draft. Navigating away discards the draft. Save stays available after a failed write, so persistence can be retried.
+- **Author suggestions:** `useAuthorSuggestions` reads feed pages already in the TanStack cache for the current mode only (`['feed', mode]`), subscribes to successful cache updates, and never fetches. Names are cleaned with `cleanAuthorName`, deduplicated with `authorKey` and ranked by frequency. Manual entry is always possible, and selected authors stay selected whether or not they are suggested.
+- **My Feed:** `preferencesToFilters` builds `FeedFilters` from the saved groups only, with no keyword or dates, and passes them to the shared `ArticleFeed`. The query, pagination, sparse handling, error recovery and `ScrollAnchor` are therefore identical to Explore, and a change in preferences is a new query key with its own cursors. With every group empty, no feed is mounted and no request is sent.
+
+Cross-tab synchronization is not implemented; another tab's changes apply after a reload.
+
 ## Feed API
 
 `GET /api/feed` query parameters:
