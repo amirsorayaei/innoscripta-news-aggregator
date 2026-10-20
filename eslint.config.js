@@ -13,6 +13,7 @@ export default defineConfig([
     '.vercel',
     'playwright-report',
     'test-results',
+    '.pnpm-store',
   ]),
   {
     files: ['**/*.{ts,tsx}'],

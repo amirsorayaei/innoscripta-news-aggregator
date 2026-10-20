@@ -31,3 +31,4 @@ dist-ssr
 coverage/
 playwright-report/
 test-results/
+.pnpm-store/

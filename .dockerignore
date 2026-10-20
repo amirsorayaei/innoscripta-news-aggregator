@@ -13,3 +13,4 @@ test-results
 *.log
 Dockerfile
 docker-compose.yml
+.pnpm-store
