@@ -39,7 +39,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open http://localhost:5173. `pnpm dev` runs Vite and the Express API (port 8080) together, and Vite proxies `/api` to the API. Without a `.env` file the app runs in **Demo** mode:
+Open http://localhost:5173. `pnpm dev` runs Vite and the Express API (port 8080, or `PORT` from the shell or `.env`) together, and Vite proxies `/api` to the API. Without a `.env` file the app runs in **Demo** mode:
 
 - fictional articles with `example.com` links;
 - no API keys and no outbound requests;
@@ -76,7 +76,7 @@ docker compose up --build
 
 - **Demo:** serves the app and API on http://localhost:8080, keyless.
 - **Live:** create `.env` as above and run the same command.
-- **Port in use:** `HOST_PORT=8081 docker compose up --build`.
+- **Port in use:** `HOST_PORT=8081 docker compose up --build`. Inside the container the API always listens on 8080, so `PORT` in `.env` does not apply.
 
 The multi-stage Node 22 image builds with the pinned pnpm, installs production dependencies only, runs as the non-root `node` user and includes a health check.
 

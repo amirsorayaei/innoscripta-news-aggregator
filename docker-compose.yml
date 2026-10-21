@@ -8,4 +8,7 @@ services:
     env_file:
       - path: .env
         required: false
+    # Overrides any PORT in .env so the container always matches the mapping above.
+    environment:
+      PORT: '8080'
     init: true
