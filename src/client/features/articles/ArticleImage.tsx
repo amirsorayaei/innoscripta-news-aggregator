@@ -7,9 +7,10 @@ interface ArticleImageProps {
 
 /** 16:9 image with reserved space; missing or broken images show a quiet placeholder. */
 export function ArticleImage({ src }: ArticleImageProps) {
-  const [failed, setFailed] = useState(false)
+  // Tracks the URL that failed, so a different src (e.g. after a merge) loads again.
+  const [failedSrc, setFailedSrc] = useState<string>()
 
-  if (!src || failed) {
+  if (!src || src === failedSrc) {
     return (
       <div
         aria-hidden="true"
@@ -29,7 +30,7 @@ export function ArticleImage({ src }: ArticleImageProps) {
       loading="lazy"
       decoding="async"
       referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
       className="aspect-video w-full bg-muted object-cover"
     />
   )
