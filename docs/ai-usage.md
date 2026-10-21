@@ -62,11 +62,12 @@ AI assistance was used openly throughout this project. This log records what it 
 
 ## Phase 5: release readiness
 
-- **Developer:** defined the release checks: requirements audit, design and accessibility review, clean checkout, Docker, bounded hosted Live checks, secrets hygiene and final docs. The developer reviews and merges the final PR and performs the post-merge production check.
+- **Developer:** defined the release checks: requirements audit, design and accessibility review, clean checkout, Docker, bounded hosted Live checks, secrets hygiene and final docs. The developer reviews and merges the final PR.
 - **Claude Code (agent):**
   - ran the scripted UI and accessibility review, the clean-checkout and Docker verification, the bounded hosted checks and the secrets scan;
   - fixed the confirmed issues: hover contrast, heading order, touch targets and the in-project pnpm store breaking `format:check`;
-  - rewrote the README and recorded the evidence in `docs/implementation-status.md`.
+  - rewrote the README and recorded the evidence in `docs/implementation-status.md`;
+  - after the merge, ran the post-merge production check and recorded it in a follow-up docs PR.
 - **Agent corrections:**
   - A hosted check first reported zero author suggestions because it counted before the page rendered; a careful repeat showed 12.
   - A Live screenshot was captured, then deliberately not committed, because it contained third-party news images.
