@@ -1,6 +1,6 @@
 # Implementation status
 
-_Last updated: 2026-10-20 (Asia/Tehran)._
+_Last updated: 2026-10-21 (Asia/Tehran)._
 
 | Phase | Branch                     | Status                                                                                                            |
 | ----- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -8,7 +8,7 @@ _Last updated: 2026-10-20 (Asia/Tehran)._
 | 2     | `feat/news-providers`      | Merged (PR #2, merge commit `a78b110`); local and hosted Live verified, one non-blocking inconclusive observation |
 | 3     | `feat/explore-feed`        | Merged (PR #4, merge commit `a43dee2`); hosted preflight passed                                                   |
 | 4     | `feat/personalized-feed`   | Merged (PR #5, merge commit `aa0e164`); hosted Live verified                                                      |
-| 5     | `chore/release-readiness`  | PR open, awaiting review; final merge and post-merge production check pending                                     |
+| 5     | `chore/release-readiness`  | Merged (PR #6, merge commit `4aeff29`); post-merge production verified                                            |
 
 ## Requirements checklist
 
@@ -276,7 +276,7 @@ The branch was freshly cloned from GitHub into a temporary directory with no `no
 
 ### Hosted Live verification
 
-Production SHA `aa0e164`, deployment `dpl_AxKnv11WpL7StLnvNRByXV1diehK`. The fixes on this branch are not deployed yet.
+Production SHA `aa0e164`, deployment `dpl_AxKnv11WpL7StLnvNRByXV1diehK`. This ran before the Phase 5 fixes were deployed; they were checked on production after the merge (below).
 
 - **Health:** Live, ready, all three providers configured. The sidebar shows the Live badge.
 - **Explore** `?q=climate&from=2026-10-13`: 200, Live, 30 articles with Guardian, NYT and NewsAPI each `ok` (10/10). Hosts were theguardian.com, nytimes.com, bbc.co.uk, businessinsider.com, fortune.com and wired.com, with no Demo hosts.
@@ -284,6 +284,16 @@ Production SHA `aa0e164`, deployment `dpl_AxKnv11WpL7StLnvNRByXV1diehK`. The fix
 - **Preferences:** The Guardian + Technology, then Save ("Preferences saved."), then client-side navigation to My Feed, which requested exactly `?source=guardian&category=technology` with no inherited keyword or date. That returned 10 Guardian articles, with NYT and NewsAPI `skipped (not_selected)`. A reload restored the preferences from storage and repeated the same request.
 - **Author suggestions:** the first count read 0 because it ran before the Preferences page had rendered. A repeat with a single Guardian-only request, waiting for the page, showed 12 suggestions from cached Live articles.
 - **Request budget:** 6 feed requests in total, the last one for a screenshot that was not committed because it contains third-party news images. The category smoke suite was not re-run.
+
+### Post-merge production verification (2026-10-21)
+
+**Passed.** Production https://innoscripta-news-aggregator-chi.vercel.app serves deployment `dpl_74qMdmbagU4dRHnzw9iR4pp4BBVW` (`kovh1nd1o`). The deploy job of main CI run 39384257350 built it from the PR #6 merge `4aeff291ed992df99b4717fa470a26ac0529d1b6`. Quality, E2E (Demo build), Docker smoke and Deploy production all succeeded, and `vercel inspect` on the production alias resolves to that same deployment.
+
+- **Health:** `/api/health` reports `live`, ready, and Guardian, NYT and NewsAPI configured.
+- **Explore (desktop, 1440px):** the Live badge is visible and the page shows 30 real articles from theguardian.com, nytimes.com, bbc.co.uk, theverge.com, businessinsider.com, fortune.com and others, with no Demo hosts. axe reports no violations.
+- **Primary hover contrast:** on Preferences, with The Guardian selected and the pointer resting on the enabled Save button, the hover colour is the primary at 90% opacity. Composited over the card it measures 5.54:1 against the button text (AA). axe in that state reports no violations, and Save then showed "Preferences saved.".
+- **Touch targets (Pixel 7 emulation):** Clear search 44×44, the keyword and Health filter chips 44px tall, Clear all 44px tall, and the author Remove button 44×44. Explore has no horizontal overflow.
+- **Request budget:** at most two feed requests, one per Explore load (desktop and mobile). The Preferences check made none. Local Chrome drove the checks through Playwright, and the category smoke suite was not re-run.
 
 ### Secrets and repository hygiene
 
@@ -297,4 +307,3 @@ Production SHA `aa0e164`, deployment `dpl_AxKnv11WpL7StLnvNRByXV1diehK`. The fix
 - **NewsAPI:** the mixed business + health smoke result stays inconclusive and non-blocking. NewsAPI's free plan is licensed for development and testing.
 - **Author suggestions** reflect only articles loaded in the current session.
 - **Drafts:** leaving Preferences discards an unsaved draft without a prompt.
-- **Pending:** the merge of this PR and the post-merge production check of the fixes above.
