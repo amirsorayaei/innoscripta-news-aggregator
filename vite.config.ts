@@ -2,8 +2,9 @@ import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
+import { devApiPort } from './scripts/dev-api-port.js'
 
-const apiPort = process.env.PORT ?? '8080'
+const apiPort = devApiPort()
 
 // https://vite.dev/config/
 export default defineConfig({
