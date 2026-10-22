@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { useLocation, useNavigationType } from 'react-router'
 import { Search, X } from 'lucide-react'
 import { FILTER_LIMITS } from '@shared/feed-filters'
 import { Input } from '@/components/ui/input'
@@ -9,7 +11,21 @@ interface SearchBarProps {
 }
 
 export function SearchBar({ applied, onCommit }: SearchBarProps) {
-  const { draft, change, submit } = useSearchDraft(applied, onCommit)
+  const location = useLocation()
+  const navigationType = useNavigationType()
+  // Counts Back/Forward (POP) arrivals; entry keys can repeat, so a counter is
+  // used instead of the key itself. The initial entry is not counted.
+  const [seenKey, setSeenKey] = useState(location.key)
+  const [pops, setPops] = useState(0)
+  if (location.key !== seenKey) {
+    setSeenKey(location.key)
+    if (navigationType === 'POP') setPops(pops + 1)
+  }
+  const { draft, change, submit } = useSearchDraft(
+    applied,
+    onCommit,
+    String(pops),
+  )
 
   return (
     <form

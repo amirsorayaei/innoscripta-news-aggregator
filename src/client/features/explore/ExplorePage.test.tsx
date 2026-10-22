@@ -102,6 +102,22 @@ describe('Explore search', () => {
     expect(queriesSent('q')).toEqual([null, 'rail'])
   })
 
+  it('drops a pending keyword when Back changes the page', async () => {
+    const { router, user } = await renderExplore('/explore?category=business')
+    await screen.findByText(/Showing 2 articles/)
+    await user.click(filterChip('The Guardian'))
+    expect(search(router)).toBe('?source=guardian&category=business')
+
+    await user.type(screen.getByRole('searchbox'), 'zz')
+    await act(() => router.navigate(-1))
+    await act(() => sleep(500))
+
+    expect(search(router)).toBe('?category=business')
+    expect(screen.getByRole('searchbox')).toHaveValue('')
+    await act(() => router.navigate(1))
+    expect(search(router)).toBe('?source=guardian&category=business')
+  })
+
   it('never shows a slow response for an older keyword', async () => {
     server.use(
       feedHandler(async (url) => {
