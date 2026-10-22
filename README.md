@@ -1,8 +1,8 @@
 # News Desk
 
-A React + TypeScript news aggregator that combines articles from **The Guardian**, **The New York Times** and **NewsAPI** in one clean, responsive reading interface.
+A React + TypeScript news aggregator that merges articles from **The Guardian**, **The New York Times** and **NewsAPI** into one responsive reading interface.
 
-**Live app:** https://innoscripta-news-aggregator-chi.vercel.app
+**Live app: https://innoscripta-news-aggregator-chi.vercel.app** (Live mode with real provider data)
 
 | Explore (Demo data)                                                                                                    | Preferences                                                                                                                          | My Feed (mobile)                                                                            |
 | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
@@ -10,40 +10,36 @@ A React + TypeScript news aggregator that combines articles from **The Guardian*
 
 Screenshots use the synthetic Demo data, which has no images; Live articles show provider images.
 
-## Features
+## Start here
 
-- **Explore:** keyword search, plus filters for source, category and an inclusive date range (UTC days).
-  - Search applies after a short pause, or immediately on Enter.
-  - Filters live in the URL, so reload, sharing and Back/Forward restore them.
-  - On phones, filters open in a sheet that applies changes only on **Apply**.
-- **Preferences:** choose sources, categories and authors.
-  - Authors can be typed as full names or picked from articles already loaded.
-  - Edits stay in a draft until **Save**. **Cancel** restores the saved preferences, and **Reset** only clears the draft.
-- **My Feed:** articles matching the saved preferences, with OR within a group, AND between groups, and an empty group meaning "any". With nothing saved, it asks you to choose preferences instead of loading a generic feed.
-- **One merged feed:** articles from all providers are deduplicated by canonical URL and sorted newest first.
-  - **Load more** follows the server's cursor and keeps your reading position.
-  - Partial failures, sparse batches, provider limits and the real end of results are each explained.
-- **Responsive and accessible:** layouts from 320px to wide desktop; keyboard support, visible focus, labelled controls, connected error messages and status announcements.
-- **Demo and Live modes:** a keyless Demo mode with deterministic sample data, and a Live mode that calls the real APIs from the server only.
+A suggested path through the app, on the [Live app](https://innoscripta-news-aggregator-chi.vercel.app) or a [local run](#run-locally):
 
-## Requirements
+1. **Explore:** search for a keyword, then filter by source, category and date range (inclusive UTC days). Search applies after a short pause or immediately on Enter. Filters live in the URL, so reload, sharing and Back/Forward restore them.
+2. **Load more:** scroll to the end of the results. The next batch follows the server's cursor, duplicates across providers are removed, and your reading position stays put. Notes explain partial failures, provider limits and the real end of results.
+3. **Preferences:** select sources and categories, optionally add authors (typed as full names or picked from loaded articles), then **Save**. **Cancel** restores the saved preferences; **Reset** clears only the draft.
+4. **My Feed:** shows articles matching the saved preferences: OR within a group, AND between groups, and an empty group means "any". With nothing saved, it asks you to choose preferences.
+5. **Mobile:** below 1024px, **Filters** opens a sheet. Changes apply only on **Apply**; **Cancel** discards them.
+
+To follow the same path in the source, see the [Code walkthrough](#code-walkthrough).
+
+## Run locally
+
+### Requirements
 
 - **Node.js 22** (`.nvmrc`). The production build, Docker image, CI and Vercel all use Node 22.
 - **pnpm 10.33.0** (pinned in `package.json` → `packageManager`; install with `npm install --global pnpm@10.33.0`)
 - **Docker** with Compose v2.24+ (only for the container)
 
-## Quick start (keyless Demo)
+### Without keys (Demo)
+
+A fresh checkout has no `.env`, so it runs in **Demo** mode: deterministic, fictional articles with `example.com` links, no API keys, no outbound requests and a permanent **Demo data** badge.
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open http://localhost:5173. `pnpm dev` runs Vite and the Express API (port 8080, or `PORT` from the shell or `.env`) together, and Vite proxies `/api` to the API. Without a `.env` file the app runs in **Demo** mode:
-
-- fictional articles with `example.com` links;
-- no API keys and no outbound requests;
-- a permanent **Demo data** badge.
+Open http://localhost:5173. `pnpm dev` runs Vite and the Express API (port 8080, or `PORT` from the shell or `.env`) together, and Vite proxies `/api` to the API.
 
 To run the production build:
 
@@ -52,7 +48,19 @@ pnpm build
 pnpm start      # client and API on http://localhost:8080
 ```
 
-## Live mode
+### Docker
+
+```bash
+docker compose up --build
+```
+
+- **Demo:** without `.env`, serves the app and API on http://localhost:8080.
+- **Live:** create `.env` as below and run the same command.
+- **Port in use:** `HOST_PORT=8081 docker compose up --build`. Inside the container the API always listens on 8080, so `PORT` in `.env` does not apply.
+
+The multi-stage Node 22 image installs production dependencies only, runs as the non-root `node` user and includes a health check.
+
+### Live mode
 
 Copy `.env.example` to `.env` and fill in:
 
@@ -63,22 +71,11 @@ NYT_API_KEY=...        # https://developer.nytimes.com/
 NEWSAPI_API_KEY=...    # https://newsapi.org/register
 ```
 
-- **Required keys:** all three. Without them, `/api/feed` returns `503 configuration_error`, and the app says so instead of showing Demo data.
+- **Required keys:** all three. Without them, `/api/feed` returns `503 configuration_error`, and the app says so instead of falling back to Demo data.
 - **Where keys live:** only on the server. They never use a `VITE_` prefix and never reach the browser, and `.env` is git- and Docker-ignored.
-- **Loading:** `pnpm dev`, `pnpm start` and Docker Compose load `.env` when present. Variables already exported in the shell take precedence.
+- **Loading with pnpm:** `pnpm dev` and `pnpm start` load `.env` when present, and variables exported in the shell override its values.
+- **Loading with Docker Compose:** the container gets the image defaults plus `.env` through `env_file`; other shell exports are not forwarded. Compose fixes the internal `PORT` at 8080, and `HOST_PORT` only selects the published host port.
 - **Checking the setup:** `GET /api/health` shows the mode and which keys are configured, without revealing them.
-
-## Docker
-
-```bash
-docker compose up --build
-```
-
-- **Demo:** serves the app and API on http://localhost:8080, keyless.
-- **Live:** create `.env` as above and run the same command.
-- **Port in use:** `HOST_PORT=8081 docker compose up --build`. Inside the container the API always listens on 8080, so `PORT` in `.env` does not apply.
-
-The multi-stage Node 22 image builds with the pinned pnpm, installs production dependencies only, runs as the non-root `node` user and includes a health check.
 
 ## Tests and quality
 
@@ -104,9 +101,29 @@ src/shared/   Zod contracts and pure helpers used by both sides
 api/          Vercel function entry exporting the same Express app
 ```
 
-- **Request flow:** the browser calls only the BFF (`GET /api/health`, `GET /api/feed`). The BFF calls the three providers in parallel, each with a 5-second timeout and cancellation. It normalizes and validates every article, caches successful pages for 5 minutes, and returns per-provider statuses with an opaque cursor.
-- **Client:** TanStack Query handles requests and pagination; React context holds the saved preferences.
-- **More detail:** [docs/architecture.md](docs/architecture.md).
+The browser calls only the BFF (`GET /api/health`, `GET /api/feed`). The BFF queries the three providers in parallel with a 5-second timeout each, normalizes and validates the articles, caches successful pages for 5 minutes and returns per-provider statuses with an opaque cursor. On the client, TanStack Query handles requests and pagination, and React context holds the saved preferences. See [docs/architecture.md](docs/architecture.md) for details.
+
+### Code walkthrough
+
+One Explore request at runtime:
+
+```
+Explore filters (URL) → useFeed → GET /api/feed → feed route → feed service
+  → Guardian / NYT / NewsAPI adapters → normalized articles, statuses, cursor
+  → mergeArticles → article cards
+```
+
+The table lists entry points worth opening, not the runtime order above; their imports lead to the smaller helpers.
+
+| Entry point                                                                                                                                                      | Why open it                                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`explore/use-explore-filters.ts`](src/client/features/explore/use-explore-filters.ts), [`explore-url.ts`](src/client/features/explore/explore-url.ts)           | How applied filters live in the URL: lenient parsing, one canonical form, and history entries for Back/Forward. [`ExplorePage.tsx`](src/client/features/explore/ExplorePage.tsx) shows how search, desktop filters and the mobile sheet feed into it. |
+| [`articles/use-feed.ts`](src/client/features/articles/use-feed.ts)                                                                                               | Client fetching and pagination: one TanStack infinite query per mode and filter set, where the server's `nextCursor` drives **Load more**.                                                                                                            |
+| [`articles/merge-articles.ts`](src/client/features/articles/merge-articles.ts), [`ArticleFeed.tsx`](src/client/features/articles/ArticleFeed.tsx)                | How batches become one deduplicated, newest-first list, and how the feed renders loading, partial failures, notices and the end of results.                                                                                                           |
+| [`server/feed/feed-route.ts`](src/server/feed/feed-route.ts), [`feed-service.ts`](src/server/feed/feed-service.ts)                                               | The BFF side: request validation and error responses, then the per-provider fan-out with timeouts, cursor checks, caching and the shared date and author post-filter.                                                                                 |
+| [`server/providers/`](src/server/providers)                                                                                                                      | The adapter contract in [`types.ts`](src/server/providers/types.ts) and one adapter per provider. Read these for each API's category, date and paging mapping; Demo data plugs in through the same contract in [`server/demo/`](src/server/demo).     |
+| [`shared/feed-filters.ts`](src/shared/feed-filters.ts), [`shared/feed.ts`](src/shared/feed.ts)                                                                   | Zod contracts used by both sides: the filter schema behind the URL, the API query and saved preferences, and the response schema the browser validates.                                                                                               |
+| [`preferences/PreferencesProvider.tsx`](src/client/features/preferences/PreferencesProvider.tsx), [`MyFeedPage.tsx`](src/client/features/my-feed/MyFeedPage.tsx) | Saved preferences: read once from storage, written only on Save, then turned into feed filters for My Feed through the same `ArticleFeed`.                                                                                                            |
 
 ## Limitations
 
@@ -118,7 +135,7 @@ api/          Vercel function entry exporting the same Express app
 
 ## Documentation
 
-- [docs/implementation-status.md](docs/implementation-status.md): requirements checklist and verification log
-- [docs/architecture.md](docs/architecture.md): API contract, pagination, caching and provider mappings
-- [DESIGN.md](DESIGN.md): visual direction, tokens, layout and references
-- [docs/ai-usage.md](docs/ai-usage.md): how AI assistance was used and what the developer decided
+- [docs/implementation-status.md](docs/implementation-status.md): requirement coverage, dated verification evidence and remaining limitations
+- [docs/architecture.md](docs/architecture.md): design decisions, trade-offs and the feed API contract
+- [docs/design.md](docs/design.md): visual direction, tokens, layout and references
+- [docs/ai-usage.md](docs/ai-usage.md): development roles and the review workflow

@@ -64,7 +64,7 @@ Typography uses Geist Sans, bundled locally through `@fontsource-variable/geist`
 
 - **Preferences:**
   - **Layout:** three cards (Sources, Categories, Authors) with fieldset legends and one-line explanations. Sources and categories reuse the Explore toggle chips at 44px.
-  - **Authors:** selected names are teal-tinted pills that wrap instead of truncating, each with a 36px remove button labelled "Remove _name_". Below them are a labelled name field with an Add button, a connected error line, and suggestion buttons ("Add _name_") from loaded articles.
+  - **Authors:** selected names are teal-tinted pills that wrap instead of truncating, each with a remove button labelled "Remove _name_" (44px on touch layouts, 36px on desktop). Below them are a labelled name field with an Add button, a connected error line, and suggestion buttons ("Add _name_") from loaded articles.
   - **Action bar:** sticky at the bottom with a status line (unsaved changes, saved, or not persisted) and Reset, Cancel and Save. Below `sm`, the status takes its own row so the three buttons stay together.
   - **Storage warning:** a warning panel appears when storage is unavailable.
 - **My Feed:**
