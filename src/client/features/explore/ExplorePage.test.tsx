@@ -73,6 +73,27 @@ describe('Explore URL state', () => {
     await user.click(screen.getByRole('button', { name: 'Clear all' }))
     expect(search(router)).toBe('')
   })
+
+  it('keeps keyboard focus on the filter list as chips are removed', async () => {
+    const { router, user } = await renderExplore(
+      '/explore?source=guardian&source=nyt',
+    )
+    const guardian = await screen.findByRole('button', {
+      name: 'Remove filter The Guardian',
+    })
+
+    await user.click(guardian)
+    expect(search(router)).toBe('?source=nyt')
+    expect(
+      screen.getByRole('button', { name: 'Remove filter The New York Times' }),
+    ).toHaveFocus()
+
+    await user.click(screen.getByRole('button', { name: 'Clear all' }))
+    expect(search(router)).toBe('')
+    expect(
+      screen.getByRole('searchbox', { name: 'Search articles' }),
+    ).toHaveFocus()
+  })
 })
 
 describe('Explore search', () => {
@@ -347,6 +368,32 @@ describe('Explore pagination', () => {
     expect(
       screen.getByText('You’ve reached the end of these results.'),
     ).toBeInTheDocument()
+  })
+
+  it('keeps focus on Load more while the next page loads', async () => {
+    const pages = twoPages()
+    server.use(
+      feedHandler(async (url) => {
+        if (url.searchParams.get('cursor')) await sleep(200)
+        return pages(url)
+      }),
+    )
+    const { user } = await renderExplore()
+    await screen.findByText('Showing 10 articles')
+
+    await user.click(screen.getByRole('button', { name: 'Load more' }))
+    // Browsers move focus off a disabled button, so loading only marks it busy.
+    const loading = screen.getByRole('button', { name: 'Loading more…' })
+    expect(loading).toHaveFocus()
+    expect(loading).toBeEnabled()
+    expect(loading).toHaveAttribute('aria-disabled', 'true')
+    await user.click(loading)
+    await screen.findByText('Showing 20 articles')
+    expect(queriesSent('cursor')).toEqual([null, 'page-2'])
+
+    // Load more is gone at the end, so focus stays in the footer.
+    const end = screen.getByText('You’ve reached the end of these results.')
+    expect(end.parentElement).toHaveFocus()
   })
 
   it('keeps loaded articles after a failed page and retries the same cursor', async () => {

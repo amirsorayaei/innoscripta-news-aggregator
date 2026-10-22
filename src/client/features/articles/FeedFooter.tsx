@@ -1,3 +1,4 @@
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { Loader2 } from 'lucide-react'
 import { providerNames } from '@shared/providers'
 import { Button } from '@/components/ui/button'
@@ -20,8 +21,32 @@ export function FeedFooter({
   onRefresh,
 }: FeedFooterProps) {
   const end = feedEnd(summary)
+  const box = useRef<HTMLDivElement>(null)
+  const focused = useRef<Element | null>(null)
+
+  // When the focused button is removed or replaced (the end of results, an
+  // error state), keep keyboard focus in the footer instead of the page body.
+  // Focus only moves if that element really left the page.
+  useEffect(() => {
+    const last = focused.current
+    if (!last || last.isConnected || document.activeElement !== document.body)
+      return
+    focused.current = null
+    const target = box.current?.querySelector('button') ?? box.current
+    // The reading position is kept by ScrollAnchor; focus must not scroll.
+    target?.focus({ preventScroll: true })
+  })
+
+  const trackFocus = (element: Element) => {
+    focused.current = element
+  }
+  const forgetFocus = (element: Element) => {
+    if (focused.current === element) focused.current = null
+  }
+
   const refreshButton = (
     <Button
+      key="refresh"
       size="lg"
       variant="outline"
       className="min-h-11"
@@ -32,11 +57,14 @@ export function FeedFooter({
   )
   const loadMoreButton = (
     <Button
+      key="load-more"
       size="lg"
       variant="outline"
-      className="min-h-11 min-w-40"
-      onClick={onLoadMore}
-      disabled={isLoadingMore}
+      className="min-h-11 min-w-40 aria-disabled:cursor-progress"
+      // aria-disabled, not disabled: browsers move focus off a disabled button,
+      // which would drop keyboard users to the top of the page.
+      onClick={isLoadingMore ? undefined : onLoadMore}
+      aria-disabled={isLoadingMore || undefined}
       aria-busy={isLoadingMore}
     >
       {isLoadingMore && <Loader2 aria-hidden="true" className="animate-spin" />}
@@ -47,7 +75,7 @@ export function FeedFooter({
   if (loadMoreError && !isLoadingMore) {
     const { title, details, recovery } = describeFeedError(loadMoreError)
     return (
-      <FooterBox>
+      <FooterBox box={box} onFocusIn={trackFocus} onFocusLeft={forgetFocus}>
         <div role="alert" className="text-sm">
           <p className="font-medium">Couldn’t load more articles. {title}</p>
           {details.map((detail) => (
@@ -68,7 +96,7 @@ export function FeedFooter({
 
   if (end === 'more' || end === 'sparse') {
     return (
-      <FooterBox>
+      <FooterBox box={box} onFocusIn={trackFocus} onFocusLeft={forgetFocus}>
         {end === 'sparse' && (
           <p className="text-sm text-muted-foreground">
             The last batch had no new articles matching these filters. More may
@@ -85,7 +113,7 @@ export function FeedFooter({
       .map((s) => providerNames[s.providerId])
       .join(', ')
     return (
-      <FooterBox>
+      <FooterBox box={box} onFocusIn={trackFocus} onFocusLeft={forgetFocus}>
         <p className="text-sm text-muted-foreground">
           No more articles from the available sources. {names} paused during
           this search; refresh to try again.
@@ -96,7 +124,7 @@ export function FeedFooter({
   }
 
   return (
-    <FooterBox>
+    <FooterBox box={box} onFocusIn={trackFocus} onFocusLeft={forgetFocus}>
       <p className="text-sm text-muted-foreground">
         You’ve reached the end of these results.
       </p>
@@ -104,9 +132,29 @@ export function FeedFooter({
   )
 }
 
-function FooterBox({ children }: { children: React.ReactNode }) {
+interface FooterBoxProps {
+  box: RefObject<HTMLDivElement | null>
+  onFocusIn: (element: Element) => void
+  onFocusLeft: (element: Element) => void
+  children: ReactNode
+}
+
+function FooterBox({ box, onFocusIn, onFocusLeft, children }: FooterBoxProps) {
   return (
-    <div className="flex flex-col items-center gap-3 py-8 text-center">
+    <div
+      ref={box}
+      tabIndex={-1}
+      onFocus={(event) => onFocusIn(event.target)}
+      onBlur={(event) => {
+        const element = event.target
+        // After a real blur the element is still on the page, so forget it.
+        // If it was removed instead, keep it so focus can be restored.
+        queueMicrotask(() => {
+          if (element.isConnected) onFocusLeft(element)
+        })
+      }}
+      className="flex flex-col items-center gap-3 py-8 text-center outline-none"
+    >
       {children}
     </div>
   )

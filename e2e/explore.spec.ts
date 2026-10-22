@@ -340,3 +340,66 @@ test('touch controls for search and applied filters are about 44px', async ({
     expect(box!.height, name).toBeGreaterThanOrEqual(44)
   }
 })
+
+for (const stayed of [true, false]) {
+  test(`final Load more ${stayed ? 'keeps focus in the footer' : 'does not take focus back after the user moved away'}`, async ({
+    page,
+  }) => {
+    const story = (id: string, minutes: number) => ({
+      id,
+      canonicalUrl: `https://news.test/${id}`,
+      url: `https://news.test/${id}`,
+      title: `Story ${id}`,
+      publishedAt: new Date(
+        Date.UTC(2026, 9, 19, 12) + minutes * 60_000,
+      ).toISOString(),
+      authors: [],
+      providerId: 'guardian',
+      publisherName: 'The Guardian',
+      categoryBasis: 'unknown',
+    })
+    const statuses = (state: string) =>
+      ['guardian', 'nyt', 'newsapi'].map((providerId) => ({
+        providerId,
+        state,
+        rawCount: 1,
+        matchedCount: 1,
+        notes: [],
+      }))
+
+    let release = () => {}
+    const held = new Promise<void>((resolve) => (release = resolve))
+    await page.route('**/api/feed**', async (route) => {
+      const cursor = new URL(route.request().url()).searchParams.get('cursor')
+      if (cursor) await held
+      await route.fulfill({
+        json: {
+          mode: 'demo',
+          articles: [cursor ? story('older', -60) : story('newest', 0)],
+          providerStatuses: statuses(cursor ? 'exhausted' : 'ok'),
+          nextCursor: cursor ? null : 'cursor-2',
+        },
+      })
+    })
+
+    await openExplore(page)
+    await page.getByRole('button', { name: 'Load more' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(results(page)).toHaveText(/loading more/)
+    if (!stayed) {
+      // Like clicking blank, non-focusable space: focus goes to the body and
+      // the blur has no related target, as when an element is removed.
+      await page.evaluate(() => (document.activeElement as HTMLElement).blur())
+    }
+    const focusedTag = () =>
+      page.evaluate(() => document.activeElement?.tagName ?? '')
+    const before = await focusedTag()
+    expect(before).toBe(stayed ? 'BUTTON' : 'BODY')
+
+    release()
+    const end = page.getByText('You’ve reached the end of these results.')
+    await expect(end).toBeVisible()
+    if (stayed) await expect(end.locator('..')).toBeFocused()
+    else expect(await focusedTag()).toBe(before)
+  })
+}
