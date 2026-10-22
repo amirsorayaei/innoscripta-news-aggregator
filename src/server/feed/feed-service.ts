@@ -74,10 +74,12 @@ export function createFeedService({
     signal: AbortSignal,
   ): Promise<Outcome> {
     // Only first pages are cached. Providers page by offset over a live,
-    // newest-first list, so a later page cached before a fresher first page
-    // could skip articles; a fresh later page can only repeat some, and those
-    // are deduplicated. Authors are filtered after fetching, so they are not
-    // part of the key.
+    // newest-first list, so a later page cached earlier than the first page it
+    // follows would come from an older snapshot and skip the articles
+    // published in between. Fetching later pages fresh removes that cache-age
+    // gap; it cannot stop upstream changes between requests from shifting
+    // offsets. Authors are filtered after fetching, so they are not part of
+    // the key.
     const query = feedFiltersToParams({ ...filters, authors: [] }).toString()
     const key = page === 1 ? `${mode}|${adapter.id}|${query}` : undefined
     const cached = key && cache.get(key)
