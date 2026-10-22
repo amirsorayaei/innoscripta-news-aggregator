@@ -177,8 +177,10 @@ describe('Explore desktop filters', () => {
     fireEvent.keyDown(to, { key: 'Enter' })
     expect(search(router)).toBe('?from=2026-10-01&to=2026-10-05')
 
-    await act(() => sleep(50))
-    expect(queriesSent('from')).toEqual([null, '2026-10-01', '2026-10-01'])
+    const expected = [null, '2026-10-01', '2026-10-01']
+    await waitFor(() => expect(queriesSent('from')).toEqual(expected))
+    await act(() => sleep(100))
+    expect(queriesSent('from')).toEqual(expected)
   })
 
   it('still applies sources and categories while the typed dates are invalid', async () => {
