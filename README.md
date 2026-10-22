@@ -4,6 +4,8 @@ A React + TypeScript news aggregator that merges articles from **The Guardian**,
 
 **Live app: https://innoscripta-news-aggregator-chi.vercel.app** (Live mode with real provider data)
 
+Built through a human-directed, agent-assisted workflow with phased implementation, independent reviews, regression tests and CI-gated delivery. See [AI workflow and tools](docs/ai-usage.md).
+
 | Explore (Demo data)                                                                                                    | Preferences                                                                                                                          | My Feed (mobile)                                                                            |
 | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | <img src="docs/screenshots/phase-3/desktop-explore.png" width="320" alt="Explore page with filters and article cards"> | <img src="docs/screenshots/phase-4/desktop-preferences.png" width="320" alt="Preferences form with sources, categories and authors"> | <img src="docs/screenshots/phase-4/mobile-myfeed.png" width="160" alt="My Feed on a phone"> |
@@ -138,4 +140,5 @@ The table lists entry points worth opening, not the runtime order above; their i
 - [docs/implementation-status.md](docs/implementation-status.md): requirement coverage, dated verification evidence and remaining limitations
 - [docs/architecture.md](docs/architecture.md): design decisions, trade-offs and the feed API contract
 - [docs/design.md](docs/design.md): visual direction, tokens, layout and references
-- [docs/ai-usage.md](docs/ai-usage.md): development roles and the review workflow
+- [docs/ai-usage.md](docs/ai-usage.md): development roles, tools, skills and the review workflow
+- [CLAUDE.md](CLAUDE.md): project instructions for future agent sessions
