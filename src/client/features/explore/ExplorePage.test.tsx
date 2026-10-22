@@ -73,6 +73,27 @@ describe('Explore URL state', () => {
     await user.click(screen.getByRole('button', { name: 'Clear all' }))
     expect(search(router)).toBe('')
   })
+
+  it('keeps keyboard focus on the filter list as chips are removed', async () => {
+    const { router, user } = await renderExplore(
+      '/explore?source=guardian&source=nyt',
+    )
+    const guardian = await screen.findByRole('button', {
+      name: 'Remove filter The Guardian',
+    })
+
+    await user.click(guardian)
+    expect(search(router)).toBe('?source=nyt')
+    expect(
+      screen.getByRole('button', { name: 'Remove filter The New York Times' }),
+    ).toHaveFocus()
+
+    await user.click(screen.getByRole('button', { name: 'Clear all' }))
+    expect(search(router)).toBe('')
+    expect(
+      screen.getByRole('searchbox', { name: 'Search articles' }),
+    ).toHaveFocus()
+  })
 })
 
 describe('Explore search', () => {
