@@ -42,7 +42,7 @@ export interface FeedErrorDescription {
 export function describeFeedError(error: unknown): FeedErrorDescription {
   if (!(error instanceof ApiError)) {
     return {
-      title: 'Couldn’t reach the News Desk server.',
+      title: 'Couldn’t reach the News Aggregator server.',
       details: ['Check your connection and try again.'],
       recovery: 'retry',
     }

@@ -27,7 +27,7 @@ test('redirects the root path to Explore in Demo mode', async ({ page }) => {
   await expect(
     page.getByText('Demo data').filter({ visible: true }),
   ).toBeVisible()
-  await expect(page).toHaveTitle('Explore · News Desk')
+  await expect(page).toHaveTitle('Explore · News Aggregator')
 })
 
 test('serves deep links and supports Back/Forward', async ({
@@ -66,7 +66,7 @@ test('mobile navigation sheet closes after choosing a page', async ({
 
   const trigger = page.getByRole('button', { name: 'Open navigation' })
   await trigger.click()
-  const sheet = page.getByRole('dialog', { name: 'News Desk' })
+  const sheet = page.getByRole('dialog', { name: 'News Aggregator' })
   await expect(sheet).toBeVisible()
 
   await page.keyboard.press('Escape')

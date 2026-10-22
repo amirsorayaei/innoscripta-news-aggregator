@@ -54,7 +54,7 @@ describe('unknown API routes', () => {
 })
 
 describe('client build serving', () => {
-  const clientDir = mkdtempSync(path.join(tmpdir(), 'news-desk-client-'))
+  const clientDir = mkdtempSync(path.join(tmpdir(), 'news-aggregator-client-'))
   mkdirSync(path.join(clientDir, 'assets'))
   writeFileSync(path.join(clientDir, 'index.html'), '<div id="root"></div>')
   writeFileSync(path.join(clientDir, 'assets', 'app.js'), 'console.log(1)')

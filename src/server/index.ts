@@ -23,7 +23,7 @@ const app = createApp(config, {
 
 const server = app.listen(config.port, () => {
   console.log(
-    `News Desk server listening on port ${config.port} (${config.mode} mode${hasClientBuild ? ', serving client build' : ', API only'})`,
+    `News Aggregator server listening on port ${config.port} (${config.mode} mode${hasClientBuild ? ', serving client build' : ', API only'})`,
   )
 })
 

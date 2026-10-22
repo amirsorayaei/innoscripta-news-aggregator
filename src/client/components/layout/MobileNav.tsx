@@ -24,7 +24,7 @@ export function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="w-72 bg-sidebar">
         <SheetHeader>
-          <SheetTitle>News Desk</SheetTitle>
+          <SheetTitle>News Aggregator</SheetTitle>
           <SheetDescription className="sr-only">
             Navigate between sections.
           </SheetDescription>

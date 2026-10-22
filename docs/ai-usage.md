@@ -1,6 +1,6 @@
 # AI usage
 
-News Desk was built through a human-directed, agent-assisted engineering workflow: scoped phases, agent implementation, separate review, regression tests and CI-gated delivery. This page records the roles, tools and evidence behind that process.
+News Aggregator was built through a human-directed, agent-assisted engineering workflow: scoped phases, agent implementation, separate review, regression tests and CI-gated delivery. This page records the roles, tools and evidence behind that process.
 
 ## Roles
 

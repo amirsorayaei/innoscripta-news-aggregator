@@ -11,6 +11,7 @@ export type Preferences = Pick<
   'sources' | 'categories' | 'authors'
 >
 
+// Retain the storage key so the product rename preserves saved preferences.
 export const PREFERENCES_STORAGE_KEY = 'news-desk.preferences'
 export const PREFERENCES_SCHEMA_VERSION = 1
 

@@ -1,4 +1,4 @@
-# Working on News Desk
+# Working on News Aggregator
 
 Instructions for future agent sessions, added after the case-study implementation. The development history and tool usage are recorded in [docs/ai-usage.md](docs/ai-usage.md).
 
