@@ -101,7 +101,7 @@ src/shared/   Zod contracts and pure helpers used by both sides
 api/          Vercel function entry exporting the same Express app
 ```
 
-The browser calls only the BFF (`GET /api/health`, `GET /api/feed`). The BFF queries the three providers in parallel with a 5-second timeout each, normalizes and validates the articles, caches successful pages for 5 minutes and returns per-provider statuses with an opaque cursor. On the client, TanStack Query handles requests and pagination, and React context holds the saved preferences. See [docs/architecture.md](docs/architecture.md) for details.
+The browser calls only the BFF (`GET /api/health`, `GET /api/feed`). The BFF queries the three providers in parallel with a 5-second timeout each, normalizes and validates the articles, caches successful first pages for 5 minutes and returns per-provider statuses with an opaque cursor. On the client, TanStack Query handles requests and pagination, and React context holds the saved preferences. See [docs/architecture.md](docs/architecture.md) for details.
 
 ### Code walkthrough
 
