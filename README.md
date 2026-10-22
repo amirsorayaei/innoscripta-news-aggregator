@@ -73,7 +73,8 @@ NEWSAPI_API_KEY=...    # https://newsapi.org/register
 
 - **Required keys:** all three. Without them, `/api/feed` returns `503 configuration_error`, and the app says so instead of falling back to Demo data.
 - **Where keys live:** only on the server. They never use a `VITE_` prefix and never reach the browser, and `.env` is git- and Docker-ignored.
-- **Loading:** `pnpm dev`, `pnpm start` and Docker Compose load `.env` when present. Variables already exported in the shell take precedence.
+- **Loading with pnpm:** `pnpm dev` and `pnpm start` load `.env` when present, and variables exported in the shell override its values.
+- **Loading with Docker Compose:** the container gets the image defaults plus `.env` through `env_file`; other shell exports are not forwarded. Compose fixes the internal `PORT` at 8080, and `HOST_PORT` only selects the published host port.
 - **Checking the setup:** `GET /api/health` shows the mode and which keys are configured, without revealing them.
 
 ## Tests and quality
@@ -134,7 +135,7 @@ The table lists entry points worth opening, not the runtime order above; their i
 
 ## Documentation
 
-- [docs/implementation-status.md](docs/implementation-status.md): requirements checklist and verification log
-- [docs/architecture.md](docs/architecture.md): API contract, pagination, caching and provider mappings
+- [docs/implementation-status.md](docs/implementation-status.md): requirement coverage, dated verification evidence and remaining limitations
+- [docs/architecture.md](docs/architecture.md): design decisions, trade-offs and the feed API contract
 - [DESIGN.md](DESIGN.md): visual direction, tokens, layout and references
-- [docs/ai-usage.md](docs/ai-usage.md): how AI assistance was used and what the developer decided
+- [docs/ai-usage.md](docs/ai-usage.md): development roles and the review workflow

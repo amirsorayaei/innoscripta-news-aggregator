@@ -24,7 +24,7 @@ Real-provider checks used the developer's keys. Selected real-key diagnostics an
 
 ## Workflow
 
-Each change followed the same loop:
+Implementation work and reviewed bug fixes followed this loop. Documentation-only edits did not need a reproduction or regression test.
 
 1. **Implementation** on a feature branch, mostly by Claude Code, within a scope set by the developer.
 2. **Separate review and reproduction**, mainly by Codex, looking for bugs and weak checks. A finding was reproduced before it was fixed.

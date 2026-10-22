@@ -27,7 +27,7 @@ Left out on purpose: accounts, a database, cross-tab sync, dark mode and an in-a
 
 ## Verification evidence
 
-### Current source: `main` at `8b2ef5a`
+### Recorded baseline: `main` at `8b2ef5a`
 
 [CI run 39632489528](https://github.com/amirsorayaei/innoscripta-news-aggregator/actions/runs/39632489528) (2026-10-21, push of merge [#10](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/10), which also contains the image fix from [#9](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/9)). Every job succeeded:
 
@@ -36,9 +36,9 @@ Left out on purpose: accounts, a database, cross-tab sync, dark mode and an in-a
 - **Docker smoke:** builds and runs the image, then checks Demo health, a deep link, a JSON 404, the Demo feed with a cursor follow-up, and a 400 for an invalid date.
 - **Deploy production:** ran only after the three jobs above, and aliased the build to https://innoscripta-news-aggregator-chi.vercel.app.
 
-These checks use Demo data and make no provider requests.
+These checks use Demo data and make no provider requests. `8b2ef5a` is the last application change recorded here; later documentation-only commits are not covered by this run.
 
-### Configuration fixes
+### Fixes after the release
 
 - **Article images** ([#9](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/9)): an image that failed once now loads again when a merge supplies a different URL. Covered by [`ArticleImage.test.tsx`](../src/client/features/articles/ArticleImage.test.tsx).
 - **PORT** ([#10](https://github.com/amirsorayaei/innoscripta-news-aggregator/pull/10)): the dev proxy follows `PORT` from `.env` like the server, and Compose pins the container port to 8080. Covered by [`dev-api-port.test.ts`](../scripts/dev-api-port.test.ts); the PR describes the reproduction and the fixture-based dev and Compose checks.
