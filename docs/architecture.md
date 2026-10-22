@@ -1,62 +1,63 @@
 # Architecture
 
-One package with three source roots:
+The main design decisions, their trade-offs and the feed API contract. Setup, the review path and the code entry points are in the [README](../README.md).
 
-| Path         | Responsibility                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------ |
-| `src/shared` | Zod contracts, types, categories, date and author helpers. No environment or React access. |
-| `src/server` | Express BFF: config, provider adapters, Demo data, feed service, routes.                   |
-| `src/client` | React app. It talks only to the BFF.                                                       |
-| `api/`       | Vercel function entry that exports the same Express app.                                   |
+## Overview
 
-Data flow: URL or saved preferences → normalized filters → TanStack Query → `GET /api/feed` → three adapters in parallel → shared response → client merge and sort → UI. Explore reads filters from the URL; My Feed builds them from saved preferences.
+| Path                              | Responsibility                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------------------ |
+| [`src/shared`](../src/shared)     | Zod contracts, types, categories, date and author helpers. No environment or React access. |
+| [`src/server`](../src/server)     | Express BFF: config, provider adapters, Demo data, feed service, routes.                   |
+| [`src/client`](../src/client)     | React app. It talks only to the BFF.                                                       |
+| [`api/index.ts`](../api/index.ts) | Vercel function entry that exports the same Express app.                                   |
 
-## Client feed
+Data flow: URL or saved preferences → normalized filters → TanStack Query → `GET /api/feed` → provider adapters in parallel → shared response → client merge and sort → UI. Explore reads its filters from the URL; My Feed builds them from saved preferences.
 
-`src/client/features/articles` holds the reusable feed, and `src/client/features/explore` holds Explore's URL and filter behaviour.
+## Decisions and trade-offs
 
-- **Mode first:** `useFeedMode` waits for `/api/health`. If health fails, or Live mode is not ready, it shows an explicit panel and sends no feed request; it never guesses a mode.
-- **Query:** `useFeed(filters, mode)` wraps `useInfiniteQuery`. The key is `['feed', mode, serialized normalized filters]`, the page parameter is the server's opaque cursor, and the query's `AbortSignal` is passed to `fetch`. The global defaults apply: 5-minute stale time, no automatic retries, and no refetching on focus, mount or reconnect.
-- **Filter changes:** a new key means a new pagination stream with its own cursors. Previous results are never shown as placeholders, so a slow response for old filters can only land in the old cache entry.
-- **Load more:** `fetchNextPage({ cancelRefetch: false })`, ignored while a page is loading. A failed page is not stored, and the loaded cards stay. A transient failure (network, 5xx, all providers failing) offers Load more again with the **same cursor**. A rejected cursor (400 `invalid_cursor`) cannot be retried, so the footer offers **Refresh** instead. The cards remain until the user chooses it.
-- **Refresh and retry:** `resetQueries` on the exact key, so only page one is fetched again rather than the whole old page chain.
-- **Merging** (`mergeArticles`): batches are merged by article ID, which is the server's hash of the canonical URL, so there are no client URL rules. The Guardian, then NYT, then NewsAPI copy wins. Missing summary, image, authors or category are filled from other copies, and a category keeps its basis. `providers` lists every provider that returned the article. Sorting is `publishedAt` descending, then ID. Every fetched article is shown; nothing is hidden to fake a global order.
-- **Feed state** (`summarizeFeed`): statuses and paused providers come from the latest batch, and notes from every batch. The footer then shows one of four states:
-  - **more:** a cursor exists;
-  - **sparse:** a cursor exists but the last batch added no articles;
-  - **end:** no cursor and no paused provider;
-  - **stopped:** no cursor, with providers paused.
+### Provider adapters on the server
 
-  The count is the number of unique articles shown.
+The browser never talks to a news provider. A small Express BFF owns the three API keys, calls the providers and returns one validated response shape.
 
-- **Scroll anchor:** `ScrollAnchor` wraps the grid and is armed while a next page loads. When the merged list arrives, `getSnapshotBeforeUpdate` reads the first article below the sticky mobile header and its viewport offset, using the layout the user sees at that moment, so scrolling during the request is respected. After the commit, it scrolls by however far that article moved. It never restores after a Refresh or across filter streams. Native `overflow-anchor` is disabled on the grid so the two mechanisms don't stack.
-- **Explore URL** (`exploreFiltersFromParams`): each value is checked on its own.
-  - Dropped values: unknown sources and categories, impossible dates, and both dates of a reversed range. Authors and unknown parameters are ignored (Explore has no author filter).
-  - Kept or adjusted: the keyword is truncated to 100 characters, and the remaining values are kept.
-  - Canonical form: non-canonical URLs are replaced once with the canonical form, and applying filters pushes a history entry, so reload, sharing and Back/Forward restore the same filters.
-- **Search:** typing commits after 400 ms; Enter commits immediately and cancels the pending commit. A keyword applied elsewhere (Back, a removed chip) replaces the draft.
-- **Filters:**
-  - **Desktop:** filters apply when valid; an invalid date range shows an error and sends nothing.
-  - **Mobile:** the Sheet edits a copy of the applied filters. Apply commits it, while Cancel, Escape or dismissal discard it, and Reset clears only the copy.
+- **Credentials:** keys are read from the server environment only, never use a `VITE_` prefix and never reach the client bundle. NewsAPI's key is sent in the `X-Api-Key` header rather than the URL. Upstream URLs, bodies and keys are never returned or logged; a failure is logged as `[feed] <provider> failed: <code>`.
+- **One contract:** each provider implements [`ProviderAdapter`](../src/server/providers/types.ts), `fetchPage(filters, page, signal) → { articles, rawCount, hasMore, notes }`. Request building and response mapping are pure functions, so each mapping is unit-tested without a network. Demo data implements the same contract.
+- **Trade-off:** an extra server hop and a serverless function to deploy, in exchange for private keys, one response shape and a single place for timeouts, caching and validation.
 
-## Preferences and My Feed
+### Filter state: URL, query cache, preferences and drafts
 
-- **Applied preferences** (`features/preferences`):
-  - `PreferencesProvider` sits above the router, so every route sees the same applied sources, categories and authors. It reads storage once on start and never writes during hydration or editing.
-  - `save()` normalizes with the shared filter schema, applies, then attempts to write. It returns whether the write succeeded, and `persisted` records the result.
-- **Storage:**
-  - **Payload:** one key, `news-desk.preferences`, holding `{ schemaVersion: 1, preferences }`.
-  - **Validation:** the payload must match its Zod envelope, and the values are validated and normalized with `feedFiltersSchema`, giving the same IDs, author cleaning, deduplication and limits (20 authors, 80 characters) as the API. Malformed JSON, invalid values or another version yield empty preferences.
-  - **Failures:** access to `localStorage`, `getItem` and `setItem` are each guarded. A read failure starts empty and not persisted. A write failure keeps the new preferences in memory, and the UI says _"Changes are not persisted on this device."_ A later successful Save clears that status.
-- **Draft:** the Preferences page keeps a local draft (`usePreferencesDraft`). Edits never reach the provider until Save. Cancel restores the applied preferences, and Reset empties only the draft. Navigating away discards the draft. Save stays available after a failed write, so persistence can be retried.
-- **Author suggestions:** `useAuthorSuggestions` reads feed pages already in the TanStack cache for the current mode only (`['feed', mode]`), subscribes to successful cache updates, and never fetches. Names are cleaned with `cleanAuthorName`, deduplicated with `authorKey` and ranked by frequency. Manual entry is always possible, and selected authors stay selected whether or not they are suggested.
-- **My Feed:** `preferencesToFilters` builds `FeedFilters` from the saved groups only, with no keyword or dates, and passes them to the shared `ArticleFeed`. The query, pagination, sparse handling, error recovery and `ScrollAnchor` are therefore identical to Explore, and a change in preferences is a new query key with its own cursors. With every group empty, no feed is mounted and no request is sent.
+Each kind of state has one owner:
 
-Cross-tab synchronization is not implemented; another tab's changes apply after a reload.
+- **Applied Explore filters** live in the URL ([`use-explore-filters.ts`](../src/client/features/explore/use-explore-filters.ts)). Parsing is lenient: each value is checked on its own, so one bad value never discards the rest. A non-canonical URL is replaced once with its canonical form, and applying filters pushes a history entry, so reload, sharing and Back/Forward restore results.
+- **Remote data** lives in TanStack Query. The feed key is `['feed', mode, serialized normalized filters]`, so a filter change starts a new pagination stream instead of mixing cursors. Previous results are not shown as placeholders, so a slow response for old filters can only land in the old cache entry. Automatic retries and background refetches are off, so provider quotas stay predictable.
+- **Saved preferences** live in [`PreferencesProvider`](../src/client/features/preferences/PreferencesProvider.tsx), above the router. They are read from `localStorage` once and written only on Save. The stored value is versioned and validated with the same `feedFiltersSchema` as API requests, so saved IDs, author names and limits always match what the API accepts. If storage is blocked or a write fails, preferences keep working for the session and the UI says so.
+- **Drafts stay local:** the search box (applied after 400 ms or on Enter), the mobile filter sheet (applied on **Apply**) and the Preferences form (applied on **Save**) each edit a copy until it is committed.
+- **Mode first:** the feed waits for `/api/health` and sends no request until the mode is known and Live is configured, rather than guessing.
+
+Trade-offs: no cross-tab synchronization (another tab's changes apply after a reload), and leaving Preferences discards an unsaved draft without a prompt.
+
+### Pagination, deduplication and reading position
+
+- **Batches:** each request asks every active provider for at most one page of 10, so a batch has at most 30 candidates. There are no global totals or page numbers, because the providers don't share them.
+- **Stateless cursors:** the response's `nextCursor` records each provider's progress (next page, exhausted, paused or skipped). The server keeps no session, so any instance can serve the next page.
+- **Merging on the client:** [`mergeArticles`](../src/client/features/articles/merge-articles.ts) merges every loaded batch by article ID, a hash of the canonical URL computed on the server. The Guardian copy wins over NYT, and NYT over NewsAPI; missing fields are filled from other copies. The list is sorted newest first, which is a claim about the fetched articles only, not the providers' archives.
+- **Reading position:** because later batches are re-sorted into the list, newer articles can be inserted above what the user is reading. [`ScrollAnchor`](../src/client/features/articles/ScrollAnchor.tsx) records the first visible article just before the merged list renders and scrolls by however far it moved. It does not restore after a Refresh or across filter changes.
+- **Footer states:** more (a cursor exists), sparse (a cursor exists but the last batch added nothing), end, and stopped (providers paused). A failed page is not stored, so Load more retries the same cursor; a rejected cursor offers Refresh instead.
+
+### Validation, partial failures, cancellation and caching
+
+- **Validation at every boundary:** the shared filter schema validates the request, items from each provider are parsed one at a time so one malformed item cannot drop a page, and the browser validates the response schema before rendering.
+- **Partial failures:** providers run in parallel and independently, each with a 5-second timeout combined with the request's abort signal. A failed provider is `paused` for the rest of that pagination stream and not retried until a fresh request, which favours quota safety over persistence. The response is `200` when at least one attempted provider succeeds and `503 all_providers_failed` only when all fail.
+- **Cancellation:** the route aborts upstream work only if the client disconnects before the response finishes; a normal close after sending is not a cancellation. On Vercel this relies on `supportsCancellation` in [`vercel.json`](../vercel.json).
+- **Caching:** [`PageCache`](../src/server/feed/page-cache.ts) keeps successful provider pages in memory for 5 minutes, up to 200 entries. The key is mode, provider, filters without authors, and page, and holds no secrets. Errors are not cached, and API responses are sent with `Cache-Control: no-store`.
+
+### Demo and Live
+
+- **Demo** (`NEWS_MODE=demo`, the default) uses in-memory adapters with the same contract, so the feed service, cursors, post-filters and statuses behave as in Live. The data is synthetic and deterministic: 35 articles per provider, five hours apart, counting back from `DEMO_NOW`, with some NewsAPI items duplicating Guardian URLs to exercise deduplication. Demo makes no outbound requests.
+- **Live** needs all three keys. Without them there is no feed service, and `/api/feed` returns `503 configuration_error` instead of falling back to Demo data ([`from-config.ts`](../src/server/feed/from-config.ts)). `/api/health` reports the mode and which keys are configured, without revealing them.
 
 ## Feed API
 
-`GET /api/feed` query parameters:
+`GET /api/feed` query parameters ([`feed-filters.ts`](../src/shared/feed-filters.ts)):
 
 | Parameter    | Rules                                                                                          |
 | ------------ | ---------------------------------------------------------------------------------------------- |
@@ -67,138 +68,43 @@ Cross-tab synchronization is not implemented; another tab's changes apply after 
 | `author`     | Repeated full names. Max 20, each at most 80 characters. Names may contain commas.             |
 | `cursor`     | Opaque value from the previous response, sent with the same filters.                           |
 
-Lists use repeated keys. Filters are normalized before use: duplicates are removed, sources and categories follow a fixed order, and authors are sorted by their comparison key. `feedFiltersToParams` therefore produces one stable serialization for equal filters.
+Filters are normalized before use (duplicates removed, fixed ordering), so equal filters always serialize to the same query string.
 
-Responses:
+Responses ([`feed.ts`](../src/shared/feed.ts)):
 
-- **200**: `{ mode, articles, providerStatuses, nextCursor }` when at least one attempted provider succeeded, or when none needed a request.
-- **400**: `invalid_request` with the offending `fields`, or `invalid_cursor`.
-- **503**: `configuration_error` (Live without all three keys), or `all_providers_failed` with safe per-provider statuses.
+- **200:** `{ mode, articles, providerStatuses, nextCursor }` when at least one attempted provider succeeded, or when none needed a request.
+- **400:** `invalid_request` with the offending `fields`, or `invalid_cursor`.
+- **503:** `configuration_error` (Live without all three keys), or `all_providers_failed` with safe per-provider statuses.
 
 `providerStatuses` has one entry per provider:
 
-| State       | Meaning                                                                                                                                                                                                   |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ok`        | Returned a page and has more.                                                                                                                                                                             |
-| `exhausted` | No more pages. The `result_limit_reached` note marks a plan limit rather than the end of the archive.                                                                                                     |
-| `paused`    | Failed in this pagination stream. `error.code` is one of `unauthorized`, `rate_limited`, `timeout`, `upstream_unavailable`, `invalid_response` or `bad_request`. It is not retried until a fresh request. |
-| `skipped`   | Not requested: `not_selected`, or `date_out_of_range` for the plan's search window.                                                                                                                       |
+| State       | Meaning                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `ok`        | Returned a page and has more.                                                                                                      |
+| `exhausted` | No more pages. The `result_limit_reached` note marks a plan limit rather than the end of the archive.                              |
+| `paused`    | Failed in this pagination stream, with a safe `error.code` such as `rate_limited` or `timeout`. Not retried until a fresh request. |
+| `skipped`   | Not requested: `not_selected`, or `date_out_of_range` for the plan's search window.                                                |
 
-`rawCount` counts upstream items before validation. `matchedCount` counts the articles included after validation and the post-filters. There is no global total and no page numbers.
+`rawCount` counts upstream items before validation; `matchedCount` counts the articles included after validation and post-filters.
 
-### Article
+Each article has an `id` (hash of the canonical URL), `canonicalUrl`, `url`, `title`, optional `summary` and `imageUrl`, `publishedAt` (ISO UTC), `authors`, `providerId`, `publisherName`, an optional `category` and a `categoryBasis` (`article`, `publisher` or `unknown`). Items without a title, an HTTP(S) URL or a valid timestamp are dropped, HTML is converted to plain text and never rendered, and canonical URLs drop tracking parameters. The rules are in [`normalize.ts`](../src/server/providers/normalize.ts).
 
-`id` (hash of the canonical URL), `canonicalUrl`, `url`, `title`, `summary?`, `imageUrl?`, `publishedAt` (ISO UTC), `authors[]`, `providerId`, `publisherName`, `category?` and `categoryBasis` (`article`, `publisher` or `unknown`).
+## Provider mappings
 
-Normalization rules:
+Categories are mapped per provider; the exact tables live in the adapters.
 
-- **Dropped items:** anything without a title, an HTTP(S) URL or a valid timestamp.
-- **HTML:** converted to plain text and never rendered.
-- **Canonical URL:** lowercase host, no fragment, and no `utm_*`, `fbclid`, `gclid`, `dclid`, `msclkid`, `mc_cid` or `mc_eid`. Path, trailing slash and other query parameters are kept.
-- **Bylines:** parsed conservatively. `By` is removed, and the parser splits on `and`, `&`, `;`, `|` and newlines. A comma splits only when every part has at least two words, so "Doe, Jane" stays one name. Emails and URLs are dropped.
-- **Author matching:** exact after NFKC, lowercase and whitespace collapse. Accents are kept and there is no fuzzy matching.
+- **The Guardian** ([`guardian.ts`](../src/server/providers/guardian.ts), `guardianCategoryTags`): categories become keyword tags joined with OR. Guardian combines `section` and `tag` with AND, so tags are the only way to express "business OR health" in one request. Authors come from contributor tags, falling back to the byline.
+- **The New York Times** ([`nyt.ts`](../src/server/providers/nyt.ts), `nytCategorySections`): categories become `fq=section.name:(…)`, which ORs the listed sections. Both the current and the older document shapes are accepted.
+- **NewsAPI** ([`newsapi.ts`](../src/server/providers/newsapi.ts), `newsApiCategorySources`): `/v2/everything` has no category filter, so each category maps to a fixed set of 16 curated English publishers, sent as `sources`. Articles get their **publisher's** category (`categoryBasis: "publisher"`), and responses carry the `publisher_categories` note when a category filter is active. The Developer plan searches about 30 days back: older ranges are skipped or clamped with a note. BBC Sport articles come back as `bbc-news`, so when both BBC sources are requested the category is left unknown rather than guessed.
 
-## Pagination and request handling
+## Limitations
 
-- Each batch requests at most one page of 10 from each active provider, so there are at most 30 candidates.
-- **Cursor:** base64url JSON `{ v: 1, f, p }`. `f` is a SHA-256 fingerprint of the mode plus the normalized filters. `p` holds each provider's progress: `next` with a page, `exhausted`, `paused` with a code, or `skipped` with a note. Cursors are validated for length, version, allowed providers, page bounds (1–100) and filter match. Each provider's progress must also agree with the current filters: a provider that the source filter or availability rules exclude must stay `skipped` with the same note, and an eligible provider cannot be marked `skipped`. Otherwise the request is rejected with 400 `invalid_cursor` before any adapter runs. Cursors are not secret and not authorization; they stay stateless, with no signature or session.
-- **Ordering:** articles in a response are sorted by `publishedAt` desc, then `id`. Only fetched articles are claimed to be newest-first, not the providers' whole archives.
-- **Post-filters:** UTC day bounds and author matching apply to every provider's page after fetching. Author results are therefore "matches within the fetched pages", not a full archive search.
-- **Isolation:** providers run in parallel and independently. Each gets a 5-second timeout combined with the request's abort signal.
-- **Cancellation:** the handler aborts upstream work only when the response closes before it finishes (`res.writableFinished`). A normal close after sending is not treated as a disconnect. Vercel cancellation is enabled with `supportsCancellation` in `vercel.json`.
-- **Cache:** an in-memory page cache holds successful provider pages only, for 5 minutes, up to 200 entries, evicting the oldest first. The key is mode, provider, filters without authors, and page; it never contains secrets. Errors are not cached. On Vercel the cache is per instance and temporary.
-- **Logging:** logs contain only `[feed] <provider> failed: <code>`. URLs, keys and upstream bodies are never logged or returned.
+- **Source selection is provider-level:** Guardian, NYT or NewsAPI. The publishers behind NewsAPI cannot be selected individually.
+- **NewsAPI categories describe the publisher**, not each article's topic.
+- **Author filtering** is an exact match after Unicode normalization, lowercasing and whitespace collapse, applied to the pages providers return. It is not an archive-wide author search, so a batch can have no matches while more pages follow.
+- **The cache is per instance:** on Vercel each function instance has its own short-lived cache, so it reduces repeated requests but is not a shared quota budget. Free plans are tight (NYT allows about 5 requests per minute; NewsAPI's Developer plan delays articles and is licensed for development and testing only), and there is no application-level rate limiting.
+- **Cursors are validated, not trusted:** a cursor carries a SHA-256 fingerprint of the mode and filters and is checked for size, version, page bounds (1–100) and agreement with the current filters, so a tampered cursor cannot re-enable an excluded provider. Cursors are unsigned, though, so they are not secret and not authorization.
 
-## Providers
+## Verification
 
-The adapter contract is `fetchPage(filters, page, signal) → { articles, rawCount, hasMore, notes }`, with pages starting at 1. Each adapter keeps its request builder and response mapper as pure, exported functions.
-
-### The Guardian (Content API `/search`)
-
-- **Parameters:** `q`, `from-date` and `to-date`, `order-by=newest`, `page`, `page-size=10`, `show-fields=trailText,thumbnail,byline` and `show-tags=contributor,keyword`.
-- **Category filter:** keyword tags joined with `|` (OR). Guardian combines `section` and `tag` with AND, so tags are the only filter that can express "business OR health" in one request. Health uses `society/health`, not the whole `society` section.
-- **Article category:** a `society/health` tag maps to health. Otherwise the section maps through a fixed table, for example `film` → entertainment. Unmapped sections get no category.
-- **Authors:** contributor tags, falling back to the parsed byline.
-- **Paging:** `hasMore` is `currentPage < pages`.
-
-| Category      | Tags                                      |
-| ------------- | ----------------------------------------- |
-| general       | `world/world`, `uk/uk`, `us-news/us-news` |
-| business      | `business/business`                       |
-| technology    | `technology/technology`                   |
-| science       | `science/science`                         |
-| health        | `society/health`                          |
-| sports        | `sport/sport`                             |
-| entertainment | `culture/culture`                         |
-
-### The New York Times (Article Search v2)
-
-- **Parameters:** `q`, `begin_date` and `end_date` (`YYYYMMDD`), `sort=newest`, and a zero-based `page` (internal page minus 1).
-- **Category filter:** `fq=section.name:("A" "B")`, which ORs the listed sections.
-- **Paging:** `hasMore` uses `meta.offset + docs.length < meta.hits`, capped at page 100.
-- **Mapping:** both the current document shape (`multimedia.default.url`, `byline.original`) and the older one (multimedia array with relative URLs, `byline.person`) are accepted. Structured `person` names come before the parsed byline.
-
-| Category      | Sections     |
-| ------------- | ------------ |
-| general       | World, U.S.  |
-| business      | Business     |
-| technology    | Technology   |
-| science       | Science      |
-| health        | Health, Well |
-| sports        | Sports       |
-| entertainment | Arts, Movies |
-
-### NewsAPI (`/v2/everything`)
-
-- **Request:** the key goes in the `X-Api-Key` header, never the URL. Other parameters are `language=en`, `sortBy=publishedAt`, `pageSize=10` and `page`.
-- **Categories:** `/v2/everything` has no category filter. Each category maps to a fixed set of English publishers (16 IDs, under the 20-source limit, all present in the live English catalogue on 2026-10-20), and the union is sent as `sources`. With no category, the whole curated set is used, and `q` is omitted when there is no keyword.
-- **Category meaning:** articles are labelled by their **publisher's** category (`categoryBasis: "publisher"`), and responses note `publisher_categories` when a category filter is active. This is not a statement about each article's topic. Unknown publishers get no category.
-- **Search window:** the Developer plan searches articles up to one month old ([pricing](https://newsapi.org/pricing)). A range that ends before that window is `skipped` (`date_out_of_range`). An older start date is moved forward with the note `date_range_clamped`.
-- **Result limit:** the `maximumResultsReached` error ends paging as `exhausted` with `result_limit_reached`. The adapter does not assume a fixed limit.
-- **Removed articles:** `[Removed]` placeholders are dropped.
-- **Publisher aliases:** categories are resolved against the sources actually requested. A live check on 2026-10-20 showed that `sources=bbc-sport` returns articles with `source.id: "bbc-news"`, so `bbc-sport` is listed as an alias of `bbc-news`.
-  - A sports-only request labels BBC articles as sports.
-  - A general-only request labels them general.
-  - When both BBC sources are requested (no category filter, or general + sports), the publisher category is ambiguous, so those articles get no category (`categoryBasis: "unknown"`) rather than a guess.
-
-| Category      | Sources                              |
-| ------------- | ------------------------------------ |
-| general       | bbc-news, associated-press           |
-| business      | bloomberg, business-insider, fortune |
-| technology    | techcrunch, the-verge, wired         |
-| science       | new-scientist, national-geographic   |
-| health        | medical-news-today                   |
-| sports        | espn, bbc-sport, talksport           |
-| entertainment | ign, buzzfeed                        |
-
-### Verification status
-
-Local Live verification with free keys on 2026-10-20 (`pnpm smoke:live --categories`):
-
-- **The Guardian:** every check passed, including pagination, keyword with dates, all seven tag-based categories and mixed business + health, where both categories appeared. The general check used the union of its tags, so it does not prove each general tag on its own. A tag-filtered article's primary section can map to a different category.
-- **NYT:** every check passed. `section.name` filtering works, each category page mapped 10/10 to its category, and mixed business + health returned both. Responses use the current shape (`multimedia.default`, `byline.original`).
-- **NewsAPI:**
-  - **Catalogue:** `reuters` and `entertainment-weekly` were missing from the English catalogue and were removed.
-  - **Sports:** sports results came back as `bbc-news`, which led to the alias handling above.
-  - **Rerun:** after both fixes, the NewsAPI-only rerun passed every check except mixed business + health. Its newest page held only business articles while the separate health check passed, so the verdict stays inconclusive. This is a documented, non-blocking observation (see `docs/implementation-status.md`).
-
-Hosted (Vercel) Live behaviour has not been verified.
-
-`pnpm smoke:live` makes up to 3 requests per provider: page 1, page 2 when page 1 reports more, and keyword with dates. `--categories` adds 8 checks per provider, seven single categories plus mixed business + health. With `--categories`, NewsAPI also gets one source-catalogue request, for at most 34 requests in total. It gives each check a verdict:
-
-- **Fail:** an HTTP error or invalid structure; a non-empty page with no usable articles; an empty unfiltered page 1; or page 2 that is empty, unusable or repeats every page 1 article although page 1 reported more. Partial overlap is allowed for offset drift.
-- **Inconclusive:** empty keyword or category results, or category results that don't map back to the requested categories. Neither certifies a mapping.
-- **Pass:** a category check passes only when every requested category appears among the results.
-
-Results are recorded in `docs/implementation-status.md`.
-
-## Demo mode
-
-`NEWS_MODE=demo`, the default, uses in-memory adapters with the same contract, so the feed service, cursors, post-filters and statuses behave exactly as in Live. The data is synthetic:
-
-- 35 articles per provider (four pages), covering all seven categories.
-- Several multi-author bylines.
-- NewsAPI items that reuse Guardian URLs with `utm_*` parameters, which resolve to the same article ID.
-- Timestamps five hours apart, counting back from `DEMO_NOW` (default `2026-10-19T09:00:00Z`), so data never shifts between requests.
-
-Demo makes no outbound requests. Live never falls back to Demo data.
+Verification evidence is recorded with dates in [implementation-status.md](implementation-status.md). It includes local real-key checks of all three providers on 2026-10-20, hosted Live checks on Vercel on 2026-10-20, and the post-merge production check on 2026-10-21. One NewsAPI result (mixed business + health) remains inconclusive and non-blocking. `pnpm smoke:live` is an optional manual check of the real APIs; it needs keys and is not part of CI.
