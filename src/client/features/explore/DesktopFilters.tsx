@@ -28,10 +28,14 @@ export function DesktopFilters({ filters, onApply }: DesktopFiltersProps) {
   const [ownKey, setOwnKey] = useState<string>()
 
   // Back/Forward or a removed chip changes the applied filters; mirror them.
-  // A change applied from this form keeps the draft, including unapplied dates.
+  // The navigation this form just made keeps the draft, including unapplied
+  // dates. Its key is consumed on arrival, so a later Back/Forward to the same
+  // URL still mirrors the restored filters.
   if (appliedKey !== syncedKey) {
     setSyncedKey(appliedKey)
-    if (appliedKey !== ownKey) {
+    if (appliedKey === ownKey) {
+      setOwnKey(undefined)
+    } else {
       setDraft(toDraft(filters))
       setShowDateError(false)
     }
@@ -46,7 +50,9 @@ export function DesktopFilters({ filters, onApply }: DesktopFiltersProps) {
       from: dates.from,
       to: dates.to,
     })
-    setOwnKey(exploreSearch(applied))
+    const key = exploreSearch(applied)
+    // An unchanged key causes no navigation, so there is nothing to consume.
+    if (key !== appliedKey) setOwnKey(key)
     onApply(applied)
   }
 

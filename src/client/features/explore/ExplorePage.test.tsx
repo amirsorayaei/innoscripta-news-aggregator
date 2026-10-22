@@ -184,6 +184,25 @@ describe('Explore desktop filters', () => {
     expect(new Set(queriesSent('from'))).toEqual(new Set([null, '2026-10-01']))
   })
 
+  it('shows the restored date after Back and Forward', async () => {
+    const { router, user } = await renderExplore()
+    await screen.findByText(/Showing 2 articles/)
+    const from = screen.getByLabelText('From')
+    for (const value of ['2026-10-01', '2026-10-10']) {
+      fireEvent.change(from, { target: { value } })
+      fireEvent.blur(from)
+    }
+    expect(search(router)).toBe('?from=2026-10-10')
+
+    await act(() => router.navigate(-1))
+    expect(from).toHaveValue('2026-10-01')
+    await act(() => router.navigate(1))
+    expect(from).toHaveValue('2026-10-10')
+
+    await user.click(filterChip('Business'))
+    expect(search(router)).toBe('?from=2026-10-10&category=business')
+  })
+
   it('still applies sources and categories while the typed dates are invalid', async () => {
     const { router, user } = await renderExplore('/explore?from=2026-10-10')
     await screen.findByText(/Showing 2 articles/)
