@@ -2,6 +2,8 @@
 
 A React + TypeScript news aggregator that merges articles from **The Guardian**, **The New York Times** and **NewsAPI** into one responsive reading interface.
 
+**Video walkthrough:** [Watch the project demo](docs/videos/news-aggregator-walkthrough.mp4) - app features, code overview and development workflow.
+
 **Live app: https://innoscripta-news-aggregator-chi.vercel.app** (Live mode with real provider data)
 
 Built through a human-directed, agent-assisted workflow with phased implementation, independent reviews, regression tests and CI-gated delivery. See [AI workflow and tools](docs/ai-usage.md).
