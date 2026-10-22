@@ -20,6 +20,8 @@ A suggested path through the app, on the [Live app](https://innoscripta-news-agg
 4. **My Feed:** shows articles matching the saved preferences: OR within a group, AND between groups, and an empty group means "any". With nothing saved, it asks you to choose preferences.
 5. **Mobile:** below 1024px, **Filters** opens a sheet. Changes apply only on **Apply**; **Cancel** discards them.
 
+To follow the same path in the source, see the [Code walkthrough](#code-walkthrough).
+
 ## Run locally
 
 ### Requirements
@@ -99,6 +101,28 @@ api/          Vercel function entry exporting the same Express app
 ```
 
 The browser calls only the BFF (`GET /api/health`, `GET /api/feed`). The BFF queries the three providers in parallel with a 5-second timeout each, normalizes and validates the articles, caches successful pages for 5 minutes and returns per-provider statuses with an opaque cursor. On the client, TanStack Query handles requests and pagination, and React context holds the saved preferences. See [docs/architecture.md](docs/architecture.md) for details.
+
+### Code walkthrough
+
+One Explore request at runtime:
+
+```
+Explore filters (URL) → useFeed → GET /api/feed → feed route → feed service
+  → Guardian / NYT / NewsAPI adapters → normalized articles, statuses, cursor
+  → mergeArticles → article cards
+```
+
+The table lists entry points worth opening, not the runtime order above; their imports lead to the smaller helpers.
+
+| Entry point                                                                                                                                                      | Why open it                                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`explore/use-explore-filters.ts`](src/client/features/explore/use-explore-filters.ts), [`explore-url.ts`](src/client/features/explore/explore-url.ts)           | How applied filters live in the URL: lenient parsing, one canonical form, and history entries for Back/Forward. [`ExplorePage.tsx`](src/client/features/explore/ExplorePage.tsx) shows how search, desktop filters and the mobile sheet feed into it. |
+| [`articles/use-feed.ts`](src/client/features/articles/use-feed.ts)                                                                                               | Client fetching and pagination: one TanStack infinite query per mode and filter set, where the server's `nextCursor` drives **Load more**.                                                                                                            |
+| [`articles/merge-articles.ts`](src/client/features/articles/merge-articles.ts), [`ArticleFeed.tsx`](src/client/features/articles/ArticleFeed.tsx)                | How batches become one deduplicated, newest-first list, and how the feed renders loading, partial failures, notices and the end of results.                                                                                                           |
+| [`server/feed/feed-route.ts`](src/server/feed/feed-route.ts), [`feed-service.ts`](src/server/feed/feed-service.ts)                                               | The BFF side: request validation and error responses, then the per-provider fan-out with timeouts, cursor checks, caching and the shared date and author post-filter.                                                                                 |
+| [`server/providers/`](src/server/providers)                                                                                                                      | The adapter contract in [`types.ts`](src/server/providers/types.ts) and one adapter per provider. Read these for each API's category, date and paging mapping; Demo data plugs in through the same contract in [`server/demo/`](src/server/demo).     |
+| [`shared/feed-filters.ts`](src/shared/feed-filters.ts), [`shared/feed.ts`](src/shared/feed.ts)                                                                   | Zod contracts used by both sides: the filter schema behind the URL, the API query and saved preferences, and the response schema the browser validates.                                                                                               |
+| [`preferences/PreferencesProvider.tsx`](src/client/features/preferences/PreferencesProvider.tsx), [`MyFeedPage.tsx`](src/client/features/my-feed/MyFeedPage.tsx) | Saved preferences: read once from storage, written only on Save, then turned into feed filters for My Feed through the same `ArticleFeed`.                                                                                                            |
 
 ## Limitations
 
