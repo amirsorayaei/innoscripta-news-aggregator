@@ -37,8 +37,11 @@ export function FeedFooter({
     target?.focus({ preventScroll: true })
   })
 
-  const trackFocus = (element: Element | null) => {
+  const trackFocus = (element: Element) => {
     focused.current = element
+  }
+  const forgetFocus = (element: Element) => {
+    if (focused.current === element) focused.current = null
   }
 
   const refreshButton = (
@@ -72,7 +75,7 @@ export function FeedFooter({
   if (loadMoreError && !isLoadingMore) {
     const { title, details, recovery } = describeFeedError(loadMoreError)
     return (
-      <FooterBox box={box} onFocusChange={trackFocus}>
+      <FooterBox box={box} onFocusIn={trackFocus} onFocusLeft={forgetFocus}>
         <div role="alert" className="text-sm">
           <p className="font-medium">Couldn’t load more articles. {title}</p>
           {details.map((detail) => (
@@ -93,7 +96,7 @@ export function FeedFooter({
 
   if (end === 'more' || end === 'sparse') {
     return (
-      <FooterBox box={box} onFocusChange={trackFocus}>
+      <FooterBox box={box} onFocusIn={trackFocus} onFocusLeft={forgetFocus}>
         {end === 'sparse' && (
           <p className="text-sm text-muted-foreground">
             The last batch had no new articles matching these filters. More may
@@ -110,7 +113,7 @@ export function FeedFooter({
       .map((s) => providerNames[s.providerId])
       .join(', ')
     return (
-      <FooterBox box={box} onFocusChange={trackFocus}>
+      <FooterBox box={box} onFocusIn={trackFocus} onFocusLeft={forgetFocus}>
         <p className="text-sm text-muted-foreground">
           No more articles from the available sources. {names} paused during
           this search; refresh to try again.
@@ -121,7 +124,7 @@ export function FeedFooter({
   }
 
   return (
-    <FooterBox box={box} onFocusChange={trackFocus}>
+    <FooterBox box={box} onFocusIn={trackFocus} onFocusLeft={forgetFocus}>
       <p className="text-sm text-muted-foreground">
         You’ve reached the end of these results.
       </p>
@@ -131,19 +134,24 @@ export function FeedFooter({
 
 interface FooterBoxProps {
   box: RefObject<HTMLDivElement | null>
-  onFocusChange: (element: Element | null) => void
+  onFocusIn: (element: Element) => void
+  onFocusLeft: (element: Element) => void
   children: ReactNode
 }
 
-function FooterBox({ box, onFocusChange, children }: FooterBoxProps) {
+function FooterBox({ box, onFocusIn, onFocusLeft, children }: FooterBoxProps) {
   return (
     <div
       ref={box}
       tabIndex={-1}
-      onFocus={(event) => onFocusChange(event.target)}
+      onFocus={(event) => onFocusIn(event.target)}
       onBlur={(event) => {
-        // A null target can mean the focused element was removed; keep it.
-        if (event.relatedTarget) onFocusChange(null)
+        const element = event.target
+        // After a real blur the element is still on the page, so forget it.
+        // If it was removed instead, keep it so focus can be restored.
+        queueMicrotask(() => {
+          if (element.isConnected) onFocusLeft(element)
+        })
       }}
       className="flex flex-col items-center gap-3 py-8 text-center outline-none"
     >
