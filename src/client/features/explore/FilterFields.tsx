@@ -9,6 +9,8 @@ interface FilterFieldsProps {
   value: FilterDraft
   onChange: (next: FilterDraft) => void
   dateError?: string
+  /** Called when a date field is left or Enter is pressed in it. */
+  onDateCommit?: () => void
   /** Prefix for element IDs, so desktop and mobile instances never collide. */
   idPrefix: string
   /** Smaller controls for pointer-first desktop layouts. */
@@ -19,6 +21,7 @@ export function FilterFields({
   value,
   onChange,
   dateError,
+  onDateCommit,
   idPrefix,
   compact,
 }: FilterFieldsProps) {
@@ -88,6 +91,10 @@ export function FilterFields({
                 onChange={(event) =>
                   onChange({ ...value, [field]: event.target.value })
                 }
+                onBlur={onDateCommit}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') onDateCommit?.()
+                }}
                 aria-invalid={dateError ? true : undefined}
                 aria-describedby={describedBy}
                 className={cn('w-40', control)}

@@ -133,13 +133,14 @@ describe('Explore desktop filters', () => {
     await user.click(filterChip('The Guardian'))
     expect(search(router)).toBe('?source=guardian')
 
-    fireEvent.change(screen.getByLabelText('From'), {
-      target: { value: '2026-10-10' },
-    })
+    const from = screen.getByLabelText('From')
+    fireEvent.change(from, { target: { value: '2026-10-10' } })
+    fireEvent.blur(from)
     expect(search(router)).toBe('?from=2026-10-10&source=guardian')
 
     const to = screen.getByLabelText('To')
     fireEvent.change(to, { target: { value: '2026-10-01' } })
+    fireEvent.blur(to)
     const error = screen.getByText(
       'The start date must be on or before the end date.',
     )
@@ -151,6 +152,51 @@ describe('Explore desktop filters', () => {
     expect(
       feedRequests.some((url) => url.searchParams.get('to') === '2026-10-01'),
     ).toBe(false)
+  })
+  it('applies a typed date once, when the field is left or Enter is pressed', async () => {
+    const { router } = await renderExplore()
+    await screen.findByText(/Showing 2 articles/)
+    const from = screen.getByLabelText('From')
+
+    // Typing a year passes through earlier valid dates such as year 202.
+    for (const value of [
+      '0002-10-01',
+      '0020-10-01',
+      '0202-10-01',
+      '2026-10-01',
+    ])
+      fireEvent.change(from, { target: { value } })
+    expect(search(router)).toBe('')
+    expect(screen.queryByText(/Enter a valid/)).not.toBeInTheDocument()
+
+    fireEvent.blur(from)
+    expect(search(router)).toBe('?from=2026-10-01')
+
+    const to = screen.getByLabelText('To')
+    fireEvent.change(to, { target: { value: '2026-10-05' } })
+    fireEvent.keyDown(to, { key: 'Enter' })
+    expect(search(router)).toBe('?from=2026-10-01&to=2026-10-05')
+
+    await act(() => sleep(50))
+    expect(queriesSent('from')).toEqual([null, '2026-10-01', '2026-10-01'])
+  })
+
+  it('still applies sources and categories while the typed dates are invalid', async () => {
+    const { router, user } = await renderExplore('/explore?from=2026-10-10')
+    await screen.findByText(/Showing 2 articles/)
+    const to = screen.getByLabelText('To')
+    fireEvent.change(to, { target: { value: '2026-10-01' } })
+    fireEvent.blur(to)
+    expect(
+      screen.getByText('The start date must be on or before the end date.'),
+    ).toBeInTheDocument()
+
+    await user.click(filterChip('Business'))
+
+    expect(search(router)).toBe('?from=2026-10-10&category=business')
+    expect(filterChip('Business')).toHaveAttribute('aria-pressed', 'true')
+    expect(to).toHaveValue('2026-10-01')
+    expect(to).toHaveAttribute('aria-invalid', 'true')
   })
 })
 

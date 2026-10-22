@@ -14,22 +14,53 @@ interface DesktopFiltersProps {
   onApply: (filters: FeedFilters) => void
 }
 
-/** Inline filters that apply as soon as the values are valid. */
+/**
+ * Inline filters. Sources and categories apply on click. Dates apply when the
+ * field is left or Enter is pressed, so the intermediate values a browser
+ * reports while a date is typed (such as year 202) never reach the URL. While
+ * the typed range is invalid, clicks still apply with the last applied dates.
+ */
 export function DesktopFilters({ filters, onApply }: DesktopFiltersProps) {
   const [draft, setDraft] = useState(() => toDraft(filters))
+  const [showDateError, setShowDateError] = useState(false)
   const appliedKey = exploreSearch(filters)
   const [syncedKey, setSyncedKey] = useState(appliedKey)
+  const [ownKey, setOwnKey] = useState<string>()
 
   // Back/Forward or a removed chip changes the applied filters; mirror them.
+  // A change applied from this form keeps the draft, including unapplied dates.
   if (appliedKey !== syncedKey) {
     setSyncedKey(appliedKey)
-    setDraft(toDraft(filters))
+    if (appliedKey !== ownKey) {
+      setDraft(toDraft(filters))
+      setShowDateError(false)
+    }
   }
 
   const error = dateRangeError(draft)
+
+  const apply = (next: FilterDraft) => {
+    const dates = dateRangeError(next) ? toDraft(filters) : next
+    const applied = withDraft(filters, {
+      ...next,
+      from: dates.from,
+      to: dates.to,
+    })
+    setOwnKey(exploreSearch(applied))
+    onApply(applied)
+  }
+
   const change = (next: FilterDraft) => {
     setDraft(next)
-    if (!dateRangeError(next)) onApply(withDraft(filters, next))
+    const datesChanged = next.from !== draft.from || next.to !== draft.to
+    // Errors wait for the next commit, so typing never flashes them.
+    if (datesChanged) setShowDateError(false)
+    else apply(next)
+  }
+
+  const commitDates = () => {
+    setShowDateError(Boolean(error))
+    if (!error) apply(draft)
   }
 
   return (
@@ -37,7 +68,8 @@ export function DesktopFilters({ filters, onApply }: DesktopFiltersProps) {
       <FilterFields
         value={draft}
         onChange={change}
-        dateError={error}
+        dateError={showDateError ? error : undefined}
+        onDateCommit={commitDates}
         idPrefix="desktop-filters"
         compact
       />
