@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { feedFiltersSchema } from '../../shared/feed-filters.js'
 import type { FeedResponse } from '../../shared/feed.js'
-import { ProviderError, ProviderLimitReached } from '../providers/types.js'
+import {
+  ProviderError,
+  ProviderLimitReached,
+  type ProviderAdapter,
+} from '../providers/types.js'
 import {
   failingAdapter,
   hangingAdapter,
@@ -301,6 +305,48 @@ describe('feed service cache', () => {
 
     await feed.getFeed(filters({ q: 'other' }), undefined, signal())
     expect(all.guardian.fetchPage).toHaveBeenCalledTimes(2)
+  })
+
+  it('never pairs a fresh first page with an older cached later page', async () => {
+    let now = 0
+    let published = 100
+    const storyNumber = (a: { url: string }) =>
+      1000 - Number(a.url.split('story-')[1])
+    // Newest first and paged by offset, like the real providers.
+    const guardian = {
+      id: 'guardian' as const,
+      maxPage: 100,
+      fetchPage: vi.fn<ProviderAdapter['fetchPage']>(async (_f, page) => {
+        const newest = published - 1 - (page - 1) * 10
+        return {
+          articles: Array.from({ length: 10 }, (_, i) =>
+            stubArticle('guardian', 1000 - (newest - i)),
+          ),
+          rawCount: 10,
+          hasMore: true,
+          notes: [],
+        }
+      }),
+    }
+    const feed = createFeedService({
+      mode: 'live',
+      adapters: adapters({ guardian }),
+      cache: new PageCache(200, 300_000, () => now),
+    })
+    const only = filters({ sources: ['guardian'] })
+
+    // One reader loads two pages; five stories are published; page one
+    // expires for the next reader while page two is still cached.
+    const a1 = okBody(await feed.getFeed(only, undefined, signal()))
+    now = 60_000
+    await feed.getFeed(only, a1.nextCursor!, signal())
+    published = 105
+    now = 301_000
+    const b1 = okBody(await feed.getFeed(only, undefined, signal()))
+    const b2 = okBody(await feed.getFeed(only, b1.nextCursor!, signal()))
+
+    const seen = [...b1.articles, ...b2.articles].map(storyNumber)
+    expect(seen).toEqual(expect.arrayContaining([94, 93, 92, 91, 90]))
   })
 
   it('does not cache failures', async () => {
