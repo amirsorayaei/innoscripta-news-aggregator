@@ -137,5 +137,5 @@ The table lists entry points worth opening, not the runtime order above; their i
 
 - [docs/implementation-status.md](docs/implementation-status.md): requirement coverage, dated verification evidence and remaining limitations
 - [docs/architecture.md](docs/architecture.md): design decisions, trade-offs and the feed API contract
-- [DESIGN.md](DESIGN.md): visual direction, tokens, layout and references
+- [docs/design.md](docs/design.md): visual direction, tokens, layout and references
 - [docs/ai-usage.md](docs/ai-usage.md): development roles and the review workflow
