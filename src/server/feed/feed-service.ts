@@ -73,10 +73,14 @@ export function createFeedService({
     page: number,
     signal: AbortSignal,
   ): Promise<Outcome> {
-    // Authors are filtered after fetching, so they are not part of the key.
+    // Only first pages are cached. Providers page by offset over a live,
+    // newest-first list, so a later page cached before a fresher first page
+    // could skip articles; a fresh later page can only repeat some, and those
+    // are deduplicated. Authors are filtered after fetching, so they are not
+    // part of the key.
     const query = feedFiltersToParams({ ...filters, authors: [] }).toString()
-    const key = `${mode}|${adapter.id}|${query}|${page}`
-    const cached = cache.get(key)
+    const key = page === 1 ? `${mode}|${adapter.id}|${query}` : undefined
+    const cached = key && cache.get(key)
     if (cached) return { kind: 'page', page: cached }
 
     const timeout = AbortSignal.timeout(timeoutMs)
@@ -86,7 +90,7 @@ export function createFeedService({
         adapter.fetchPage(filters, page, combined),
         combined,
       )
-      cache.set(key, result)
+      if (key) cache.set(key, result)
       return { kind: 'page', page: result }
     } catch (error) {
       if (signal.aborted) throw error
