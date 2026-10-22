@@ -78,5 +78,10 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "all"
   }
 }
