@@ -102,6 +102,22 @@ describe('Explore search', () => {
     expect(queriesSent('q')).toEqual([null, 'rail'])
   })
 
+  it('drops a pending keyword when Back changes the page', async () => {
+    const { router, user } = await renderExplore('/explore?category=business')
+    await screen.findByText(/Showing 2 articles/)
+    await user.click(filterChip('The Guardian'))
+    expect(search(router)).toBe('?source=guardian&category=business')
+
+    await user.type(screen.getByRole('searchbox'), 'zz')
+    await act(() => router.navigate(-1))
+    await act(() => sleep(500))
+
+    expect(search(router)).toBe('?category=business')
+    expect(screen.getByRole('searchbox')).toHaveValue('')
+    await act(() => router.navigate(1))
+    expect(search(router)).toBe('?source=guardian&category=business')
+  })
+
   it('never shows a slow response for an older keyword', async () => {
     server.use(
       feedHandler(async (url) => {
@@ -188,6 +204,34 @@ describe('Explore mobile filters', () => {
     await user.click(within(sheet).getByRole('button', { name: 'Apply' }))
     expect(search(router)).toBe('?source=guardian&category=sports')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('closes the sheet and drops its draft when Back changes the filters', async () => {
+    setDesktop(false)
+    const { router, user } = await renderExplore()
+    await screen.findByText(/Showing 2 articles/)
+    const openSheet = async () => {
+      await user.click(screen.getByRole('button', { name: /^Filters/ }))
+      return screen.getByRole('dialog', { name: 'Filters' })
+    }
+
+    let sheet = await openSheet()
+    await user.click(within(sheet).getByRole('button', { name: 'Business' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Apply' }))
+    expect(search(router)).toBe('?category=business')
+
+    sheet = await openSheet()
+    await user.click(within(sheet).getByRole('button', { name: 'Health' }))
+    await act(() => router.navigate(-1))
+
+    expect(search(router)).toBe('')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    sheet = await openSheet()
+    expect(
+      within(sheet).getByRole('button', { name: 'Health' }),
+    ).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('blocks Apply while the date range is invalid', async () => {
