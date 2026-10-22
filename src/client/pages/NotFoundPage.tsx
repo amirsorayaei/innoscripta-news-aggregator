@@ -7,7 +7,7 @@ export function NotFoundPage() {
     <>
       <PageHeader
         title="Page not found"
-        description="This address does not match any page in News Desk."
+        description="This address does not match any page in News Aggregator."
       />
       <Button asChild size="lg">
         <Link to="/explore">Go to Explore</Link>

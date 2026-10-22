@@ -10,9 +10,9 @@ export function Brand() {
         aria-hidden="true"
         className="grid size-7 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground"
       >
-        ND
+        NA
       </span>
-      News Desk
+      News Aggregator
     </Link>
   )
 }

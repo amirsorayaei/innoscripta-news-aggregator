@@ -31,7 +31,7 @@ export function ArticleFeed(props: ArticleFeedProps) {
   if (feedMode.state === 'error') {
     return (
       <FeedErrorPanel
-        title="Couldn’t reach the News Desk server."
+        title="Couldn’t reach the News Aggregator server."
         details={['Articles can’t be loaded until the server responds.']}
         onRetry={feedMode.retry}
       />

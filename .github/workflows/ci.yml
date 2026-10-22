@@ -49,8 +49,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: docker build --tag news-desk .
-      - run: docker run --detach --name news-desk --publish 8080:8080 news-desk
+      - run: docker build --tag news-aggregator .
+      - run: docker run --detach --name news-aggregator --publish 8080:8080 news-aggregator
       - name: Wait for the health check
         run: |
           for _ in $(seq 1 30); do
@@ -73,7 +73,7 @@ jobs:
             | jq -e '.providerStatuses | length == 3'
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://localhost:8080/api/feed?from=2026-02-30')" = 400
       - if: always()
-        run: docker logs news-desk
+        run: docker logs news-aggregator
 
   deploy:
     name: Deploy production

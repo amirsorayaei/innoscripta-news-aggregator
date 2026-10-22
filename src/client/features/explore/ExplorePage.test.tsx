@@ -623,7 +623,7 @@ describe('Explore empty and error states', () => {
     await renderExplore()
 
     expect(
-      await screen.findByText('Couldn’t reach the News Desk server.'),
+      await screen.findByText('Couldn’t reach the News Aggregator server.'),
     ).toBeInTheDocument()
     expect(feedRequests).toHaveLength(0)
   })

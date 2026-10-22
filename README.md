@@ -1,8 +1,10 @@
-# News Desk
+# News Aggregator
 
 A React + TypeScript news aggregator that merges articles from **The Guardian**, **The New York Times** and **NewsAPI** into one responsive reading interface.
 
 **Live app: https://innoscripta-news-aggregator-chi.vercel.app** (Live mode with real provider data)
+
+Built through a human-directed, agent-assisted workflow with phased implementation, independent reviews, regression tests and CI-gated delivery. See [AI workflow and tools](docs/ai-usage.md).
 
 | Explore (Demo data)                                                                                                    | Preferences                                                                                                                          | My Feed (mobile)                                                                            |
 | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
@@ -130,7 +132,7 @@ The table lists entry points worth opening, not the runtime order above; their i
 - **Free plans:** NYT allows about 5 requests per minute. NewsAPI's Developer plan searches about one month back, delays articles, and is licensed for development and testing only. A rate-limited provider is paused with a message rather than retried.
 - **NewsAPI categories:** `/v2/everything` has no category filter, so categories come from 16 curated publishers and describe the **publisher**, not each article. BBC Sport articles come back as `bbc-news`, so a BBC article gets a category only when the request makes it unambiguous.
 - **Author filtering:** matches full names, ignoring case and spacing, within the pages the providers return. It is not an archive-wide author search, so a batch can have no matches while more follow.
-- **Saved preferences:** stored only in this browser's `localStorage` (`news-desk.preferences`). There are no accounts and no cross-tab sync. If storage is blocked, they work for the session and the app says _"Changes are not persisted on this device."_
+- **Saved preferences:** stored only in this browser's `localStorage` (`news-desk.preferences`, retained for compatibility). There are no accounts and no cross-tab sync. If storage is blocked, they work for the session and the app says _"Changes are not persisted on this device."_
 - **Provider behaviour differs:** multi-word search and section and tag coverage vary by provider.
 
 ## Documentation
@@ -138,4 +140,5 @@ The table lists entry points worth opening, not the runtime order above; their i
 - [docs/implementation-status.md](docs/implementation-status.md): requirement coverage, dated verification evidence and remaining limitations
 - [docs/architecture.md](docs/architecture.md): design decisions, trade-offs and the feed API contract
 - [docs/design.md](docs/design.md): visual direction, tokens, layout and references
-- [docs/ai-usage.md](docs/ai-usage.md): development roles and the review workflow
+- [docs/ai-usage.md](docs/ai-usage.md): development roles, tools, skills and the review workflow
+- [CLAUDE.md](CLAUDE.md): project instructions for future agent sessions

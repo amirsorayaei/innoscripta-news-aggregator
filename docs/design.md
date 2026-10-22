@@ -1,6 +1,6 @@
 # Design
 
-News Desk is a calm, light reading surface: warm off-white backgrounds, charcoal text and a restrained deep teal used for the active state and primary actions only. There is no dark mode.
+News Aggregator is a calm, light reading surface: warm off-white backgrounds, charcoal text and a restrained deep teal used for the active state and primary actions only. There is no dark mode.
 
 ## Tokens
 
