@@ -206,6 +206,34 @@ describe('Explore mobile filters', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('closes the sheet and drops its draft when Back changes the filters', async () => {
+    setDesktop(false)
+    const { router, user } = await renderExplore()
+    await screen.findByText(/Showing 2 articles/)
+    const openSheet = async () => {
+      await user.click(screen.getByRole('button', { name: /^Filters/ }))
+      return screen.getByRole('dialog', { name: 'Filters' })
+    }
+
+    let sheet = await openSheet()
+    await user.click(within(sheet).getByRole('button', { name: 'Business' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Apply' }))
+    expect(search(router)).toBe('?category=business')
+
+    sheet = await openSheet()
+    await user.click(within(sheet).getByRole('button', { name: 'Health' }))
+    await act(() => router.navigate(-1))
+
+    expect(search(router)).toBe('')
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    sheet = await openSheet()
+    expect(
+      within(sheet).getByRole('button', { name: 'Health' }),
+    ).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('blocks Apply while the date range is invalid', async () => {
     setDesktop(false)
     const { router, user } = await renderExplore()

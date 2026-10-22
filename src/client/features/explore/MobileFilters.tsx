@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLocation } from 'react-router'
 import { SlidersHorizontal } from 'lucide-react'
 import type { FeedFilters } from '@shared/feed-filters'
 import { Button } from '@/components/ui/button'
@@ -28,10 +29,18 @@ interface MobileFiltersProps {
 /**
  * Filters in a Sheet with a private draft: opening copies the applied filters,
  * Apply commits them together, and closing any other way discards the draft.
+ * Navigating while the Sheet is open (e.g. Back) closes it, so a draft based
+ * on the previous page can never be applied.
  */
 export function MobileFilters({ filters, onApply }: MobileFiltersProps) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(() => toDraft(filters))
+  const { key: locationKey } = useLocation()
+  const [openedAt, setOpenedAt] = useState(locationKey)
+  if (locationKey !== openedAt) {
+    setOpenedAt(locationKey)
+    if (open) setOpen(false)
+  }
   const applied = countDraftFilters(toDraft(filters))
   const error = dateRangeError(draft)
 
